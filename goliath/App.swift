@@ -14,21 +14,13 @@ struct GoliathApp: App {
 
     init() {
         do {
-            // Define the schema & container
             let schema = Schema([Workout.self, WorkoutExercise.self, Exercise.self])
-            let config = ModelConfiguration() // persistent on-disk store
+            let config = ModelConfiguration()
             container = try ModelContainer(for: schema, configurations: config)
-
-            // Seed only if empty
-            let context = container.mainContext
-            let existing = try context.fetch(FetchDescriptor<Workout>())
-            if existing.isEmpty {
-                #if DEBUG
-                SampleDataLoader.loadSampleData(context: context)
-                #endif
-            }
+            ExerciseJSONLoader.deleteAllExercises(context: container.mainContext)
+            ExerciseJSONLoader.seedIfNeeded(context: container.mainContext)
         } catch {
-            fatalError("Failed to set up SwiftData container: \(error)")
+            fatalError("Failed to set up SwiftData: \(error)")
         }
     }
 
