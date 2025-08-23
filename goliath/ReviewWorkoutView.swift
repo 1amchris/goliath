@@ -115,6 +115,9 @@ struct ReviewWorkoutView: View {
     }
 
     private func discardWorkout() {
+        for wex in workout.exercises {
+            context.delete(wex)
+        }
         context.delete(workout)
         try? context.save()
         nav.path = [] // pop to Home

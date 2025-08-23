@@ -207,23 +207,47 @@ struct HomeView: View {
                 case .workoutDetail(let id):
                     if let workout = fetchWorkout(by: id) {
                         WorkoutDetailView(workout: workout)
-                    } else { Text("Workout not found") }
+                    } else {
+                        ContentUnavailableView(
+                            "Workout not found",
+                            systemImage: "exclamationmark.magnifyingglass",
+                            description: Text("Workout \(id) couldn't be found. Please report this issue.")
+                        )
+                    }
                 case .draft(let id):
                     if let workout = fetchWorkout(by: id) {
                         ExerciseSelectionView(workout: workout)
                             .environmentObject(nav)
-                    } else { Text("Draft not found") }
+                    } else {
+                        ContentUnavailableView(
+                            "Draft not found",
+                            systemImage: "exclamationmark.magnifyingglass",
+                            description: Text("Draft \(id) couldn't be found. Please report this issue.")
+                        )
+                    }
                 case .review(let id):
                     if let workout = fetchWorkout(by: id) {
                         ReviewWorkoutView(workout: workout)
                             .environmentObject(nav)
-                    } else { Text("Review not available") }
+                    } else {
+                        ContentUnavailableView(
+                            "Review not available",
+                            systemImage: "questionmark.text.page",
+                            description: Text("Review of workout \(id) not available. Please report this issue.")
+                        )
+                    }
                 case .doExercise(let workoutId, let wexId):
                     if let workout = fetchWorkout(by: workoutId),
                        let wex = workout.exercises.first(where: { $0.id == wexId }) {
                         DoExerciseView(workout: workout, workoutExercise: wex) { _ in }
                             .environmentObject(nav)
-                    } else { Text("Exercise not found") }
+                    } else {
+                        ContentUnavailableView(
+                            "Exercise not found",
+                            systemImage: "exclamationmark.magnifyingglass",
+                            description: Text("Exercise \(wexId) in workout \(workoutId) couldn't be found. Please report this issue.")
+                        )
+                    }
                 }
             }
             .sheet(isPresented: $showDebugSheet) {
@@ -260,6 +284,9 @@ struct HomeView: View {
         .environmentObject(nav)
         .alert("Discard draft workout?", isPresented: $showDiscardAlert, presenting: selectedDraft) { draft in
             Button("Discard", role: .destructive) {
+                for wex in draft.exercises {
+                    context.delete(wex)
+                }
                 context.delete(draft)
                 try? context.save()
             }
