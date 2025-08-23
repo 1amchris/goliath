@@ -205,6 +205,9 @@ struct DoExerciseView: View {
     @EnvironmentObject private var nav: NavCoordinator
     @Environment(\.dismiss) var dismiss
     
+    @AppStorage("preferredRestSeconds") private var preferredRestSeconds: Double = 90
+    @State private var showingRestTimer: Bool = false
+    
     let workout: Workout
     @State var workoutExercise: WorkoutExercise
     var onUpdated: (WorkoutExercise) -> Void
@@ -255,9 +258,22 @@ struct DoExerciseView: View {
             }
         }
         .onReceive(timer) { now = $0 }
+        .sheet(isPresented: $showingRestTimer) {
+            RestTimerSheet(
+                preferredDuration: $preferredRestSeconds,
+                onFinish: {
+                    // continue same exercise after rest
+                },
+                onSkip: {
+                    // user skipped rest
+                },
+                onNextExercise: completeExercise
+            )
+        }
     }
 
     private func completeSet() {
+        showingRestTimer = true
         workoutExercise.completedSets += 1
         workoutExercise.exercise = workoutExercise.exercise // touch to ensure change tracking
         try? context.save()
@@ -265,6 +281,7 @@ struct DoExerciseView: View {
     }
 
     private func completeExercise() {
+        showingRestTimer = false
         workoutExercise.completedSets = max(1, workoutExercise.completedSets)
         try? context.save()
         onUpdated(workoutExercise)
