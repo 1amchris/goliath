@@ -105,9 +105,6 @@ struct ExerciseSelectionView: View {
     @State private var available: [Exercise] = []
     @State private var navigateToExercise: WorkoutExercise?
 
-    @State private var now: Date = Date()
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
     var body: some View {
         List {
             if let last = workout.exercises.last {
@@ -158,17 +155,10 @@ struct ExerciseSelectionView: View {
             .environmentObject(nav)
         }
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text(now.formatted(.dateTime.hour().minute().second()))
-                    .monospacedDigit()
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
             ToolbarItem(placement: .primaryAction) {
                 Button("End Workout") { nav.path.append(.review(workout.id)) }
             }
         }
-        .onReceive(timer) { now = $0 }
         .task { await loadExercises() }
     }
 
@@ -217,21 +207,19 @@ struct DoExerciseView: View {
     // Track which set is being edited (nil = adding a new set)
     @State private var editingIndex: Int? = nil
 
-    // Clock in toolbar
-    @State private var now: Date = Date()
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
     var body: some View {
         List {
             Section {
                 if let preset = workout.preset {
                     HStack {
                         Text("Exercise"); Spacer()
-                        Text(workoutExercise.exercise.name).foregroundStyle(.secondary)
+                        Text(workoutExercise.exercise.name)
+                            .foregroundStyle(.secondary)
                     }
                     HStack {
                         Text("Preset"); Spacer()
-                        Text(preset.name.capitalized).foregroundStyle(.secondary)
+                        Text(preset.name.capitalized)
+                            .foregroundStyle(.secondary)
                     }
                 } else {
                     ContentUnavailableView(
@@ -251,10 +239,9 @@ struct DoExerciseView: View {
                     )
                 } else {
                     ForEach(Array(workoutExercise.reps.enumerated()), id: \.offset) { index, repCount in
-                        // Tappable row to edit this set’s reps
                         Button {
                             editingIndex = index
-                            tempReps = repCount        // prefill from existing
+                            tempReps = repCount
                             showingRepsForm = true
                         } label: {
                             HStack {
@@ -274,15 +261,6 @@ struct DoExerciseView: View {
             }
         }
         .navigationTitle("Do Exercise")
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text(now.formatted(.dateTime.hour().minute().second()))
-                    .monospacedDigit()
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .onReceive(timer) { now = $0 }
 
         // Rest timer after logging a new set (not when editing)
         .sheet(isPresented: $showingRestTimer) {
@@ -308,7 +286,6 @@ struct DoExerciseView: View {
                         workout.dateModified = Date()
                         try? context.save()
 
-                        // Close sheet; clear edit state
                         showingRepsForm = false
                         editingIndex = nil
                     }
@@ -348,7 +325,8 @@ struct RepsEntrySheet: View {
                         Text(exerciseName)
                         Spacer()
                         Text("\(value)")
-                            .font(.title2).monospacedDigit()
+                            .font(.title2)
+                            .monospacedDigit()
                     }
 
                     HStack {

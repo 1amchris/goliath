@@ -19,9 +19,10 @@ class Workout: Identifiable, Equatable {
     var preset: WorkoutPreset? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.workout)
-    var exercises: [WorkoutExercise] = []
-    var orderedExercises: [WorkoutExercise] {
-        exercises.sorted { $0.order < $1.order }
+    var _exercises: [WorkoutExercise] = []
+    var exercises: [WorkoutExercise] {
+        get { _exercises.sorted { $0._order < $1._order } }
+        set { _exercises = newValue }
     }
 
     init(isDraft: Bool = true) {
@@ -38,8 +39,10 @@ class Workout: Identifiable, Equatable {
 class WorkoutExercise: Identifiable, Equatable {
     @Attribute(.unique) var id: UUID
     var exercise: Exercise
-
-    var order: Int
+    var name: String { exercise.name }
+    var targettedMuscles: [MuscleGroup] { exercise.targettedMuscles }
+    
+    var _order: Int
 
     var _repsJSON: String = "[]"
     var reps: [Int] {
@@ -54,7 +57,7 @@ class WorkoutExercise: Identifiable, Equatable {
         self.id = UUID()
         self.exercise = exercise
         self.workout = workout
-        self.order = order
+        self._order = order
     }
     
     static func == (lhs: WorkoutExercise, rhs: WorkoutExercise) -> Bool { lhs.id == rhs.id }

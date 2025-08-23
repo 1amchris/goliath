@@ -12,144 +12,127 @@ import SwiftData
 struct ReviewWorkoutView: View {
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var nav: NavCoordinator
-
-    @State var workout: Workout
+    
+    @Bindable var workout: Workout
     @State private var showDiscardAlert = false
-
+    
     // Reps editing
     @AppStorage("preferredRepsCount") private var tempReps: Int = 10
     @State private var showingRepsForm = false
     @State private var editingWex: WorkoutExercise?
     @State private var editingIndex: Int?
-
+    
     var body: some View {
-        VStack(spacing: 0) {
-            List {
-                // MARK: Details
-                Section("Details") {
-                    HStack {
-                        Text("Preset")
-                        Spacer()
-                        Text(workout.preset?.name ?? "Undefined")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if workout.isDraft {
-                        DatePicker(
-                            "Date",
-                            selection: $workout.dateCompleted,
-                            in: ...Date(),
-                            displayedComponents: [.date]
-                        )
-                        .onChange(of: workout.dateCompleted) {
-                            workout.dateModified = Date()
-                            try? context.save()
-                        }
-                    } else {
-                        HStack {
-                            Text("Date")
-                            Spacer()
-                            Text(workout.dateCompleted.formatted(date: .abbreviated, time: .shortened))
-                                .foregroundStyle(.secondary)
-                        }
-                        .accessibilityElement(children: .combine)
-                    }
+        List {
+            // MARK: Details
+            Section("Details") {
+                HStack {
+                    Text("Preset")
+                    Spacer()
+                    Text(workout.preset?.name ?? "Undefined")
+                        .foregroundStyle(.secondary)
                 }
-
-                // MARK: Exercises + reps
-                if workout.exercises.isEmpty {
-                    Section {
-                        ContentUnavailableView(
-                            "No exercises",
-                            systemImage: "list.bullet",
-                            description: Text("Add some exercises, or discard the workout.")
-                        )
+                
+                if workout.isDraft {
+                    DatePicker(
+                        "Date",
+                        selection: $workout.dateCompleted,
+                        in: ...Date(),
+                        displayedComponents: [.date]
+                    )
+                    .onChange(of: workout.dateCompleted) {
+                        workout.dateModified = Date()
+                        try? context.save()
                     }
                 } else {
-                    Section(
-                        content: {
-                            ForEach(workout.exercises) { wex in
-                                // Each exercise row with its sets (reps)
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text(wex.exercise.name)
-                                            .font(.headline)
-                                        Spacer()
-                                        Text("\(wex.completedSets) sets")
-                                            .foregroundStyle(.secondary)
-                                    }
-
-                                    if wex.reps.isEmpty {
-                                        Text("No sets")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    } else {
-                                        // List sets; tap to edit reps
-                                        ForEach(Array(wex.reps.enumerated()), id: \.offset) { idx, reps in
-                                            Button {
-                                                editingWex = wex
-                                                editingIndex = idx
-                                                tempReps = reps
-                                                showingRepsForm = true
-                                            } label: {
-                                                HStack {
-                                                    Text("Set \(idx + 1)")
-                                                    Spacer()
-                                                    Text("\(reps) reps")
-                                                        .foregroundStyle(.secondary)
-                                                        .monospacedDigit()
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(.vertical, 4)
-                            }
-                            // delete only in draft
-                            .onDelete(perform: workout.isDraft ? delete : nil)
-                            // reorder only in draft
-                            .onMove(perform: workout.isDraft ? move : nil)
-                        },
-                        header: {
-                            Text("Exercises (in order)")
-                        },
-                        footer: {
-                            if workout.isDraft {
-                                Text("Tap a set to edit its reps. Drag handles to reorder exercises.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    )
+                    HStack {
+                        Text("Date")
+                        Spacer()
+                        Text(workout.dateCompleted.formatted(date: .abbreviated, time: .shortened))
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
                 }
             }
-
-            // MARK: Actions (only when draft)
-            if workout.isDraft {
-                HStack {
-                    Button(role: .destructive) { showDiscardAlert = true } label: {
-                        Label("Discard", systemImage: "trash")
-                    }
-                    .buttonStyle(.bordered)
-
-                    Spacer()
-
-                    Button { saveWorkout() } label: {
-                        Label("Save", systemImage: "square.and.arrow.down")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(workout.exercises.isEmpty)
+            
+            // MARK: Exercises + reps
+            if workout.exercises.isEmpty {
+                Section {
+                    ContentUnavailableView(
+                        "No exercises",
+                        systemImage: "list.bullet",
+                        description: Text("Add some exercises, or discard the workout.")
+                    )
                 }
-                .padding()
-                .background(.bar)
+            } else {
+                ForEach(workout.exercises) { wex in
+                    Section {
+                        HStack {
+                            Text(wex.exercise.name).font(.headline)
+                            Spacer()
+                            Text("\(wex.completedSets) sets")
+                                .foregroundStyle(.secondary)
+                        }
+                        .if(workout.isDraft) { view in
+                            view.swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    deleteExercise(wex)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+
+                        if wex.reps.isEmpty {
+                            Text("No sets")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(Array(wex.reps.enumerated()), id: \.offset) { idx, reps in
+                                Button {
+                                    editingWex = wex
+                                    editingIndex = idx
+                                    tempReps = reps
+                                    showingRepsForm = true
+                                } label: {
+                                    HStack {
+                                        Text("Set \(idx + 1)")
+                                        Spacer()
+                                        Text("\(reps) reps")
+                                            .foregroundStyle(.secondary)
+                                            .monospacedDigit()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         .navigationTitle("Review Workout")
-        .alert("Discard this workout?", isPresented: $showDiscardAlert) {
+        .toolbar {
+            if workout.isDraft {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { saveWorkout() } label: {
+                        Label("Save", systemImage: "square.and.arrow.down")
+                    }
+                    .labelStyle(.titleOnly)
+                    .disabled(workout.exercises.isEmpty)
+                }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button(role: .destructive) { showDiscardAlert = true } label: {
+                        Label("Discard", systemImage: "trash")
+                    }
+                    .foregroundStyle(.red)
+                }
+            }
+        }
+        
+        .alert("Discard this workout? This action is irreversible.", isPresented: $showDiscardAlert) {
             Button("Discard", role: .destructive) { discardWorkout() }
             Button("Cancel", role: .cancel) {}
         }
-
+        
         // Reps editing sheet (reuse your existing sheet)
         .sheet(isPresented: $showingRepsForm) {
             RepsEntrySheet(
@@ -171,41 +154,29 @@ struct ReviewWorkoutView: View {
             )
         }
     }
-
+    
     // MARK: - Actions
-
-    private func delete(_ offsets: IndexSet) {
-        for index in offsets {
-            let wex = workout.exercises[index]
+    
+    private func deleteExercise(_ wex: WorkoutExercise) {
+        withAnimation {
             context.delete(wex)
+            renumberExerciseOrders()
+            workout.dateModified = Date()
+            try? context.save()
         }
-        workout.exercises.remove(atOffsets: offsets)
-        renumberExerciseOrders()
-        workout.dateModified = Date()
-        try? context.save()
-    }
-
-    private func move(from source: IndexSet, to destination: Int) {
-        workout.exercises.move(fromOffsets: source, toOffset: destination)
-        renumberExerciseOrders()
-        workout.dateModified = Date()
-        try? context.save()
     }
 
     private func renumberExerciseOrders() {
-        // Ensure each WorkoutExercise.order matches its position
-        for (i, wex) in workout.exercises.enumerated() {
-            if wex.order != i { wex.order = i }
-        }
+        for (i, wex) in workout.exercises.enumerated() { wex._order = i }
     }
-
+    
     private func saveWorkout() {
         workout.isDraft = false
         workout.dateModified = Date()
         try? context.save()
         nav.path = [] // pop to Home
     }
-
+    
     private func discardWorkout() {
         for wex in workout.exercises {
             context.delete(wex)
