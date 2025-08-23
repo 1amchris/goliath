@@ -1,0 +1,130 @@
+[
+  [
+    {
+      "datasetId": "full-body",
+      "name": "Full Body",
+      "muscles": [
+        "abdominals",
+        "obliques",
+        "pectorals",
+        "deltoids",
+        "biceps",
+        "triceps",
+        "forearms",
+        "trapezii",
+        "laterals",
+        "lumbars",
+        "neck",
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "adductors",
+        "abductors",
+        "calves"
+      ]
+    },
+    {
+      "datasetId": "lower-body",
+      "name": "Lower Body",
+      "muscles": [
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "adductors",
+        "abductors",
+        "calves"
+      ]
+    },
+    {
+      "datasetId": "upper-body",
+      "name": "Upper Body",
+      "muscles": [
+        "pectorals",
+        "deltoids",
+        "biceps",
+        "triceps",
+        "forearms",
+        "trapezii",
+        "laterals",
+        "lumbars",
+        "neck"
+      ]
+    }
+  ],
+  [
+    {
+      "datasetId": "pull",
+      "name": "Pull",
+      "muscles": [
+        "biceps",
+        "forearms",
+        "trapezii",
+        "laterals",
+        "lumbars"
+      ]
+    },
+    {
+      "datasetId": "push",
+      "name": "Push",
+      "muscles": [
+        "pectorals",
+        "deltoids",
+        "triceps"
+      ]
+    }
+  ],
+  [
+    {
+      "datasetId": "arms",
+      "name": "Arms",
+      "muscles": [
+        "biceps",
+        "triceps",
+        "forearms"
+      ]
+    },
+    {
+      "datasetId": "chest",
+      "name": "Chest",
+      "muscles": [
+        "pectorals",
+        "deltoids",
+        "triceps"
+      ]
+    },
+    {
+      "datasetId": "back",
+      "name": "Back",
+      "muscles": [
+        "trapezii",
+        "laterals",
+        "lumbars",
+        "erector spinae",
+        "deltoids",
+        "biceps",
+        "forearms"
+      ]
+    },
+    {
+      "datasetId": "legs",
+      "name": "Legs",
+      "muscles": [
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "adductors",
+        "abductors",
+        "calves"
+      ]
+    },
+    {
+      "datasetId": "core",
+      "name": "Core",
+      "muscles": [
+        "abdominals",
+        "obliques",
+        "lumbars"
+      ]
+    }
+  ]
+]

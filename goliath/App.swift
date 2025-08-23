@@ -17,8 +17,10 @@ struct GoliathApp: App {
             let schema = Schema([Workout.self, WorkoutExercise.self, Exercise.self])
             let config = ModelConfiguration()
             container = try ModelContainer(for: schema, configurations: config)
-            ExerciseJSONLoader.deleteAllExercises(context: container.mainContext)
-            ExerciseJSONLoader.seedIfNeeded(context: container.mainContext)
+//            DataLoader.deleteAll(in: container.mainContext)
+            DataLoader.seedMusclesIfNeeded(context: container.mainContext)
+            DataLoader.seedExercisesIfNeeded(context: container.mainContext)
+            DataLoader.seedWorkoutPresetsIfNeeded(context: container.mainContext)
         } catch {
             fatalError("Failed to set up SwiftData: \(error)")
         }

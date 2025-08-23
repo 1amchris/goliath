@@ -18,40 +18,76 @@ struct ReviewWorkoutView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if workout.exercises.isEmpty {
-                ContentUnavailableView("No exercises", systemImage: "list.bullet", description: Text("Add some exercises, or discard the workout."))
-            } else {
-                List {
+            List {
+                Section("Details") {
+                    if workout.isDraft {
+                        DatePicker(
+                            "Date",
+                            selection: $workout.dateCompleted,
+                            in: ...Date(),
+                            displayedComponents: [.date],
+                        )
+                        .onChange(of: workout.dateCompleted) { oldValue, newValue in
+                            workout.dateModified = Date()
+                            try? context.save()
+                        }
+                    } else {
+                        HStack {
+                            Text("Date")
+                            Spacer()
+                            Text(workout.dateCompleted.formatted(date: .abbreviated, time: .shortened))
+                                .foregroundStyle(.secondary)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                
+                Section("Preset") {
+                    Text(verbatim: workout.preset?.name ?? "Undefined")
+                }
+
+                if workout.exercises.isEmpty {
+                    Section {
+                        ContentUnavailableView(
+                            "No exercises",
+                            systemImage: "list.bullet",
+                            description: Text("Add some exercises, or discard the workout.")
+                        )
+                    }
+                } else {
                     Section("Exercises (in order)") {
                         ForEach(workout.exercises) { wex in
                             HStack {
                                 Text(wex.exercise.name)
                                 Spacer()
-                                Text("\(wex.completedCount)x")
+                                Text("\(wex.completedSets)x")
                                     .foregroundStyle(.secondary)
                             }
                         }
-                        .onDelete(perform: delete)
+                        // Editable only when draft
+                        .onDelete(perform: workout.isDraft ? delete : nil)
                     }
                 }
             }
 
-            HStack {
-                Button(role: .destructive) { showDiscardAlert = true } label: {
-                    Label("Discard", systemImage: "trash")
-                }
-                .buttonStyle(.bordered)
+            if workout.isDraft {
+                HStack {
+                    Button(role: .destructive) { showDiscardAlert = true } label: {
+                        Label("Discard", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
 
-                Spacer()
+                    Spacer()
 
-                Button { saveWorkout() } label: {
-                    Label("Save", systemImage: "square.and.arrow.down")
+                    Button { saveWorkout() } label: {
+                        Label("Save", systemImage: "square.and.arrow.down")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(workout.exercises.isEmpty)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(workout.exercises.isEmpty)
+                .padding()
+                .background(.bar)
             }
-            .padding()
-            .background(.bar)
         }
         .navigationTitle("Review Workout")
         .alert("Discard this workout?", isPresented: $showDiscardAlert) {
@@ -60,6 +96,7 @@ struct ReviewWorkoutView: View {
         }
     }
 
+    // MARK: - Actions
     private func delete(_ offsets: IndexSet) {
         for index in offsets {
             let wex = workout.exercises[index]
@@ -83,3 +120,4 @@ struct ReviewWorkoutView: View {
         nav.path = [] // pop to Home
     }
 }
+

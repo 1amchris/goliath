@@ -9,52 +9,128 @@ import SwiftData
 import Foundation
 
 @Model
-class Workout {
+class Workout: Identifiable, Equatable {
     @Attribute(.unique) var id: UUID
-    var dateCreated: Date
+    var dateCompleted: Date
     var dateModified: Date
-    var preset: PresetType
-    var exercises: [WorkoutExercise]
     var isDraft: Bool
 
-    init(preset: PresetType, isDraft: Bool = true) {
+    @Relationship(deleteRule: .nullify, inverse: \WorkoutPreset.workouts)
+    var preset: WorkoutPreset? = nil
+
+    @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.workout)
+    var exercises: [WorkoutExercise] = []
+    var orderedExercises: [WorkoutExercise] {
+        exercises.sorted { $0.order < $1.order }
+    }
+
+    init(isDraft: Bool = true) {
         self.id = UUID()
-        self.dateCreated = Date()
+        self.dateCompleted = Date()
         self.dateModified = Date()
-        self.preset = preset
-        self.exercises = []
         self.isDraft = isDraft
     }
+    
+    static func == (lhs: Workout, rhs: Workout) -> Bool { lhs.id == rhs.id }
 }
 
 @Model
-class WorkoutExercise {
+class WorkoutExercise: Identifiable, Equatable {
     @Attribute(.unique) var id: UUID
     var exercise: Exercise
-    var order: Int
-    var completedCount: Int
 
-    init(exercise: Exercise, order: Int, completedCount: Int = 1) {
+    var order: Int
+    var completedSets: Int
+
+    var workout: Workout
+
+    init(exercise: Exercise, workout: Workout, order: Int, completedSets: Int = 0) {
         self.id = UUID()
         self.exercise = exercise
+        self.workout = workout
         self.order = order
-        self.completedCount = completedCount
+        self.completedSets = completedSets
     }
+    
+    static func == (lhs: WorkoutExercise, rhs: WorkoutExercise) -> Bool { lhs.id == rhs.id }
 }
 
 @Model
-class Exercise {
-    @Attribute(.unique) var id: UUID
+class Exercise: Identifiable, Equatable {
+    @Attribute(.unique) var id: String
     var name: String
-    var presets: [PresetType] // many-to-many via enum list (MVP)
 
-    init(name: String, presets: [PresetType]) {
-        self.id = UUID()
+    @Relationship(inverse: \MuscleGroup.exercises)
+    var targettedMuscles: [MuscleGroup] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.exercise)
+    var workoutExercises: [WorkoutExercise] = []
+
+    init(id: String, name: String, targettedMuscles: [MuscleGroup] = []) {
+        self.id = id
         self.name = name
-        self.presets = presets
+        self.targettedMuscles = targettedMuscles
     }
+    
+    static func == (lhs: Exercise, rhs: Exercise) -> Bool { lhs.id == rhs.id }
 }
 
-enum PresetType: String, Codable, CaseIterable {
-    case fullBody, upperBody, lowerBody, chest, legs, arms, back, core
+@Model
+class WorkoutPreset: Identifiable, Equatable {
+    @Attribute(.unique) var id: String
+    var name: String
+    var groupId: UUID
+    
+    @Relationship(inverse: \MuscleGroup.presets)
+    var targettedMuscles: [MuscleGroup] = []
+
+    var workouts: [Workout] = []
+    
+    init(id: String, groupId: UUID, name: String, targeting muscleGroups: [MuscleGroup]) {
+        self.id = id
+        self.groupId = groupId
+        self.name = name
+        self.targettedMuscles = muscleGroups
+    }
+    
+    static func == (lhs: WorkoutPreset, rhs: WorkoutPreset) -> Bool { lhs.id == rhs.id }
+}
+
+@Model
+class MuscleGroup: Identifiable, Equatable {
+    typealias ID = String
+
+    enum Supported: String, CaseIterable {
+        case abdominals
+        case abductors
+        case adductors
+        case biceps
+        case calves
+        case forearms
+        case glutes
+        case hamstrings
+        case laterals
+        case lumbars
+        case neck
+        case obliques
+        case pectorals
+        case quadriceps
+        case deltoids
+        case trapezii
+        case triceps
+    }
+
+    @Attribute(.unique)
+    var id: String
+    
+    var exercises: [Exercise] = []
+    
+    var presets: [WorkoutPreset] = []
+    
+    init(_ id: Supported, exercises: [Exercise] = []) {
+        self.id = id.rawValue
+        self.exercises = exercises
+    }
+    
+    static func == (lhs: MuscleGroup, rhs: MuscleGroup) -> Bool { lhs.id == rhs.id }
 }
