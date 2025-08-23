@@ -11,9 +11,9 @@ import Combine
 struct RestTimerSheet: View {
     @Binding var preferredDuration: TimeInterval
 
-    let onFinish: () -> Void
-    let onSkip: () -> Void
-    let onNextExercise: () -> Void
+    var onFinish: () -> Void = { }
+    var onSkip: () -> Void = { }
+    var onNextExercise: () -> Void = { }
 
     @State private var remaining: TimeInterval = 0
     @State private var total: TimeInterval = 0

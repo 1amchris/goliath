@@ -204,50 +204,75 @@ struct DoExerciseView: View {
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var nav: NavCoordinator
     @Environment(\.dismiss) var dismiss
-    
+
+    @AppStorage("preferredRepsCount") private var tempReps: Int = 10
+    @State private var showingRepsForm: Bool = false
     @AppStorage("preferredRestSeconds") private var preferredRestSeconds: Double = 90
     @State private var showingRestTimer: Bool = false
-    
+
     let workout: Workout
     @State var workoutExercise: WorkoutExercise
     var onUpdated: (WorkoutExercise) -> Void
+
+    // Track which set is being edited (nil = adding a new set)
+    @State private var editingIndex: Int? = nil
 
     // Clock in toolbar
     @State private var now: Date = Date()
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        VStack(spacing: 24) {
-            if let preset = workout.preset {
-                VStack(spacing: 6) {
-                    Text(workoutExercise.exercise.name)
-                        .font(.title2).bold()
-                    Text("Preset: \(preset.name.capitalized)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        List {
+            Section {
+                if let preset = workout.preset {
+                    HStack {
+                        Text("Exercise"); Spacer()
+                        Text(workoutExercise.exercise.name).foregroundStyle(.secondary)
+                    }
+                    HStack {
+                        Text("Preset"); Spacer()
+                        Text(preset.name.capitalized).foregroundStyle(.secondary)
+                    }
+                } else {
+                    ContentUnavailableView(
+                        "No preset found.",
+                        systemImage: "exclamationmark.magnifyingglass",
+                        description: Text("The selected workout is not assigned to a preset. Please report this issue.")
+                    )
                 }
-            } else {
-                Text(verbatim: "No preset selected for workout.")
             }
 
-            Text("Sets completed: \(workoutExercise.completedSets)")
-                .font(.headline)
-
-            VStack(spacing: 12) {
-                Button(action: completeSet) {
-                    Label("Complete Set", systemImage: "checkmark.circle.fill")
+            Section("Sets completed: \(workoutExercise.completedSets)") {
+                if workoutExercise.reps.isEmpty {
+                    ContentUnavailableView(
+                        "Get started!",
+                        systemImage: "figure.run",
+                        description: Text("Get started by completing one set. Then press the 'Complete Set' button below!")
+                    )
+                } else {
+                    ForEach(Array(workoutExercise.reps.enumerated()), id: \.offset) { index, repCount in
+                        // Tappable row to edit this set’s reps
+                        Button {
+                            editingIndex = index
+                            tempReps = repCount        // prefill from existing
+                            showingRepsForm = true
+                        } label: {
+                            HStack {
+                                Text("Set \(index + 1)")
+                                Spacer()
+                                Text("\(repCount) reps")
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
+                        }
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-
-                Button(action: completeExercise) {
-                    Label("Complete Exercise", systemImage: "flag.checkered")
-                }
-                .buttonStyle(.bordered)
-                .disabled(workoutExercise.completedSets < 1)
             }
-            Spacer()
+
+            Button(action: completeSet) {
+                Label("Complete Set", systemImage: "checkmark.circle.fill")
+            }
         }
-        .padding()
         .navigationTitle("Do Exercise")
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -258,34 +283,99 @@ struct DoExerciseView: View {
             }
         }
         .onReceive(timer) { now = $0 }
+
+        // Rest timer after logging a new set (not when editing)
         .sheet(isPresented: $showingRestTimer) {
             RestTimerSheet(
                 preferredDuration: $preferredRestSeconds,
-                onFinish: {
-                    // continue same exercise after rest
-                },
-                onSkip: {
-                    // user skipped rest
-                },
                 onNextExercise: completeExercise
+            )
+        }
+
+        // Add/Edit reps
+        .sheet(isPresented: $showingRepsForm) {
+            RepsEntrySheet(
+                exerciseName: workoutExercise.exercise.name,
+                value: $tempReps,
+                onSave: { reps in
+                    withAnimation {
+                        if let idx = editingIndex {
+                            workoutExercise.reps[idx] = reps
+                        } else {
+                            workoutExercise.reps.append(reps)
+                            showingRestTimer = true
+                        }
+                        workout.dateModified = Date()
+                        try? context.save()
+
+                        // Close sheet; clear edit state
+                        showingRepsForm = false
+                        editingIndex = nil
+                    }
+                },
+                onCancel: {
+                    showingRepsForm = false
+                    editingIndex = nil
+                }
             )
         }
     }
 
     private func completeSet() {
-        showingRestTimer = true
-        workoutExercise.completedSets += 1
-        workoutExercise.exercise = workoutExercise.exercise // touch to ensure change tracking
-        try? context.save()
-        onUpdated(workoutExercise)
+        editingIndex = nil
+        if tempReps <= 0 { tempReps = 10 }
+        showingRepsForm = true
     }
 
     private func completeExercise() {
+        showingRepsForm = false
         showingRestTimer = false
-        workoutExercise.completedSets = max(1, workoutExercise.completedSets)
-        try? context.save()
-        onUpdated(workoutExercise)
         dismiss()
     }
 }
 
+struct RepsEntrySheet: View {
+    let exerciseName: String
+    @Binding var value: Int
+    let onSave: (Int) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Completed reps") {
+                    HStack {
+                        Text(exerciseName)
+                        Spacer()
+                        Text("\(value)")
+                            .font(.title2).monospacedDigit()
+                    }
+
+                    HStack {
+                        Button { value = max(0, value - 5) }    label: { Text("-5") }
+                        Button { value = max(0, value - 1) }    label: { Text("-1") }
+                        Spacer()
+                        Button { value += 1 }                   label: { Text("+1") }
+                        Button { value += 5 }                   label: { Text("+5") }
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+            .navigationTitle("Log Set")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(max(0, value))
+                    }
+                    .disabled(value <= 0)
+                }
+            }
+        }
+        .presentationDetents([.fraction(0.5), .medium])
+        .presentationDragIndicator(.visible)
+    }
+}

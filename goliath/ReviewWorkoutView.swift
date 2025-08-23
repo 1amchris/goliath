@@ -16,18 +16,32 @@ struct ReviewWorkoutView: View {
     @State var workout: Workout
     @State private var showDiscardAlert = false
 
+    // Reps editing
+    @AppStorage("preferredRepsCount") private var tempReps: Int = 10
+    @State private var showingRepsForm = false
+    @State private var editingWex: WorkoutExercise?
+    @State private var editingIndex: Int?
+
     var body: some View {
         VStack(spacing: 0) {
             List {
+                // MARK: Details
                 Section("Details") {
+                    HStack {
+                        Text("Preset")
+                        Spacer()
+                        Text(workout.preset?.name ?? "Undefined")
+                            .foregroundStyle(.secondary)
+                    }
+
                     if workout.isDraft {
                         DatePicker(
                             "Date",
                             selection: $workout.dateCompleted,
                             in: ...Date(),
-                            displayedComponents: [.date],
+                            displayedComponents: [.date]
                         )
-                        .onChange(of: workout.dateCompleted) { oldValue, newValue in
+                        .onChange(of: workout.dateCompleted) {
                             workout.dateModified = Date()
                             try? context.save()
                         }
@@ -41,11 +55,8 @@ struct ReviewWorkoutView: View {
                         .accessibilityElement(children: .combine)
                     }
                 }
-                
-                Section("Preset") {
-                    Text(verbatim: workout.preset?.name ?? "Undefined")
-                }
 
+                // MARK: Exercises + reps
                 if workout.exercises.isEmpty {
                     Section {
                         ContentUnavailableView(
@@ -55,21 +66,65 @@ struct ReviewWorkoutView: View {
                         )
                     }
                 } else {
-                    Section("Exercises (in order)") {
-                        ForEach(workout.exercises) { wex in
-                            HStack {
-                                Text(wex.exercise.name)
-                                Spacer()
-                                Text("\(wex.completedSets)x")
+                    Section(
+                        content: {
+                            ForEach(workout.exercises) { wex in
+                                // Each exercise row with its sets (reps)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text(wex.exercise.name)
+                                            .font(.headline)
+                                        Spacer()
+                                        Text("\(wex.completedSets) sets")
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    if wex.reps.isEmpty {
+                                        Text("No sets")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        // List sets; tap to edit reps
+                                        ForEach(Array(wex.reps.enumerated()), id: \.offset) { idx, reps in
+                                            Button {
+                                                editingWex = wex
+                                                editingIndex = idx
+                                                tempReps = reps
+                                                showingRepsForm = true
+                                            } label: {
+                                                HStack {
+                                                    Text("Set \(idx + 1)")
+                                                    Spacer()
+                                                    Text("\(reps) reps")
+                                                        .foregroundStyle(.secondary)
+                                                        .monospacedDigit()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            // delete only in draft
+                            .onDelete(perform: workout.isDraft ? delete : nil)
+                            // reorder only in draft
+                            .onMove(perform: workout.isDraft ? move : nil)
+                        },
+                        header: {
+                            Text("Exercises (in order)")
+                        },
+                        footer: {
+                            if workout.isDraft {
+                                Text("Tap a set to edit its reps. Drag handles to reorder exercises.")
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
-                        // Editable only when draft
-                        .onDelete(perform: workout.isDraft ? delete : nil)
-                    }
+                    )
                 }
             }
 
+            // MARK: Actions (only when draft)
             if workout.isDraft {
                 HStack {
                     Button(role: .destructive) { showDiscardAlert = true } label: {
@@ -94,17 +149,54 @@ struct ReviewWorkoutView: View {
             Button("Discard", role: .destructive) { discardWorkout() }
             Button("Cancel", role: .cancel) {}
         }
+
+        // Reps editing sheet (reuse your existing sheet)
+        .sheet(isPresented: $showingRepsForm) {
+            RepsEntrySheet(
+                exerciseName: editingWex?.exercise.name ?? "Exercise",
+                value: $tempReps,
+                onSave: { newReps in
+                    guard let wex = editingWex, let idx = editingIndex, idx < wex.reps.count else {
+                        showingRepsForm = false
+                        return
+                    }
+                    wex.reps[idx] = max(0, newReps)
+                    workout.dateModified = Date()
+                    try? context.save()
+                    showingRepsForm = false
+                },
+                onCancel: {
+                    showingRepsForm = false
+                }
+            )
+        }
     }
 
     // MARK: - Actions
+
     private func delete(_ offsets: IndexSet) {
         for index in offsets {
             let wex = workout.exercises[index]
             context.delete(wex)
         }
         workout.exercises.remove(atOffsets: offsets)
+        renumberExerciseOrders()
         workout.dateModified = Date()
         try? context.save()
+    }
+
+    private func move(from source: IndexSet, to destination: Int) {
+        workout.exercises.move(fromOffsets: source, toOffset: destination)
+        renumberExerciseOrders()
+        workout.dateModified = Date()
+        try? context.save()
+    }
+
+    private func renumberExerciseOrders() {
+        // Ensure each WorkoutExercise.order matches its position
+        for (i, wex) in workout.exercises.enumerated() {
+            if wex.order != i { wex.order = i }
+        }
     }
 
     private func saveWorkout() {
@@ -123,4 +215,3 @@ struct ReviewWorkoutView: View {
         nav.path = [] // pop to Home
     }
 }
-

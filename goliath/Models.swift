@@ -40,16 +40,21 @@ class WorkoutExercise: Identifiable, Equatable {
     var exercise: Exercise
 
     var order: Int
-    var completedSets: Int
+
+    var _repsJSON: String = "[]"
+    var reps: [Int] {
+        get { (try? JSONDecoder().decode([Int].self, from: Data(_repsJSON.utf8))) ?? [] }
+        set { _repsJSON = (try? String(data: JSONEncoder().encode(newValue), encoding: .utf8)) ?? "[]" }
+    }
+    var completedSets: Int { reps.count }
 
     var workout: Workout
 
-    init(exercise: Exercise, workout: Workout, order: Int, completedSets: Int = 0) {
+    init(exercise: Exercise, workout: Workout, order: Int) {
         self.id = UUID()
         self.exercise = exercise
         self.workout = workout
         self.order = order
-        self.completedSets = completedSets
     }
     
     static func == (lhs: WorkoutExercise, rhs: WorkoutExercise) -> Bool { lhs.id == rhs.id }
