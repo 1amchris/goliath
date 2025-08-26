@@ -261,6 +261,15 @@ struct DoExerciseView: View {
             }
         }
         .navigationTitle("Do Exercise")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: completeExercise) {
+                    Label("Next exercise", systemImage: "forward.end.alt.fill")
+                }
+                .disabled(workoutExercise.reps.isEmpty)
+                .labelStyle(.titleOnly)
+            }
+        }
 
         // Rest timer after logging a new set (not when editing)
         .sheet(isPresented: $showingRestTimer) {
