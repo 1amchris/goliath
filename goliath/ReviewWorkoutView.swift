@@ -119,12 +119,14 @@ struct ReviewWorkoutView: View {
                     .labelStyle(.titleOnly)
                     .disabled(workout.exercises.isEmpty)
                 }
-                ToolbarItem(placement: .secondaryAction) {
-                    Button(role: .destructive) { showDiscardAlert = true } label: {
-                        Label("Discard", systemImage: "trash")
-                    }
-                    .foregroundStyle(.red)
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button(role: .destructive) {
+                    showDiscardAlert = true
+                } label: {
+                    Label("Discard", systemImage: "trash")
                 }
+                .foregroundStyle(.red)
             }
         }
         

@@ -206,7 +206,8 @@ struct HomeView: View {
                 switch route {
                 case .workoutDetail(let id):
                     if let workout = fetchWorkout(by: id) {
-                        WorkoutDetailView(workout: workout)
+//                        WorkoutDetailView(workout: workout)
+                        ReviewWorkoutView(workout: workout)
                     } else {
                         ContentUnavailableView(
                             "Workout not found",
@@ -316,8 +317,6 @@ struct HomeView: View {
     private func deleteSavedWorkouts(_ offsets: IndexSet) {
         for index in offsets {
             let workout = workouts[index]
-            // delete child rows first
-            for wex in workout.exercises { context.delete(wex) }
             context.delete(workout)
         }
         try? context.save()
