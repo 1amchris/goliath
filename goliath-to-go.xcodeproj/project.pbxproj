@@ -24,18 +24,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		F3BEB36D2E54239600298AC0 /* goliath.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = goliath.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F3BEB37E2E54239700298AC0 /* goliathTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = goliathTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F3BEB3882E54239700298AC0 /* goliathUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = goliathUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3BEB36D2E54239600298AC0 /* goliath-to-go.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "goliath-to-go.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3BEB37E2E54239700298AC0 /* goliath-to-goTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "goliath-to-goTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3BEB3882E54239700298AC0 /* goliath-to-goUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "goliath-to-goUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		F3BEB3902E54239700298AC0 /* Exceptions for "goliath" folder in "goliath" target */ = {
+		F3BEB3902E54239700298AC0 /* Exceptions for "goliath" folder in "goliath-to-go" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = F3BEB36C2E54239600298AC0 /* goliath */;
+			target = F3BEB36C2E54239600298AC0 /* goliath-to-go */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -43,7 +43,7 @@
 		F3BEB36F2E54239600298AC0 /* goliath */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F3BEB3902E54239700298AC0 /* Exceptions for "goliath" folder in "goliath" target */,
+				F3BEB3902E54239700298AC0 /* Exceptions for "goliath" folder in "goliath-to-go" target */,
 			);
 			path = goliath;
 			sourceTree = "<group>";
@@ -98,9 +98,9 @@
 		F3BEB36E2E54239600298AC0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				F3BEB36D2E54239600298AC0 /* goliath.app */,
-				F3BEB37E2E54239700298AC0 /* goliathTests.xctest */,
-				F3BEB3882E54239700298AC0 /* goliathUITests.xctest */,
+				F3BEB36D2E54239600298AC0 /* goliath-to-go.app */,
+				F3BEB37E2E54239700298AC0 /* goliath-to-goTests.xctest */,
+				F3BEB3882E54239700298AC0 /* goliath-to-goUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,9 +108,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		F3BEB36C2E54239600298AC0 /* goliath */ = {
+		F3BEB36C2E54239600298AC0 /* goliath-to-go */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F3BEB3912E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliath" */;
+			buildConfigurationList = F3BEB3912E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliath-to-go" */;
 			buildPhases = (
 				F3BEB3692E54239600298AC0 /* Sources */,
 				F3BEB36A2E54239600298AC0 /* Frameworks */,
@@ -123,16 +123,16 @@
 			fileSystemSynchronizedGroups = (
 				F3BEB36F2E54239600298AC0 /* goliath */,
 			);
-			name = goliath;
+			name = "goliath-to-go";
 			packageProductDependencies = (
 			);
 			productName = goliath;
-			productReference = F3BEB36D2E54239600298AC0 /* goliath.app */;
+			productReference = F3BEB36D2E54239600298AC0 /* goliath-to-go.app */;
 			productType = "com.apple.product-type.application";
 		};
-		F3BEB37D2E54239700298AC0 /* goliathTests */ = {
+		F3BEB37D2E54239700298AC0 /* goliath-to-goTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F3BEB3962E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliathTests" */;
+			buildConfigurationList = F3BEB3962E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliath-to-goTests" */;
 			buildPhases = (
 				F3BEB37A2E54239700298AC0 /* Sources */,
 				F3BEB37B2E54239700298AC0 /* Frameworks */,
@@ -146,16 +146,16 @@
 			fileSystemSynchronizedGroups = (
 				F3BEB3812E54239700298AC0 /* goliathTests */,
 			);
-			name = goliathTests;
+			name = "goliath-to-goTests";
 			packageProductDependencies = (
 			);
 			productName = goliathTests;
-			productReference = F3BEB37E2E54239700298AC0 /* goliathTests.xctest */;
+			productReference = F3BEB37E2E54239700298AC0 /* goliath-to-goTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		F3BEB3872E54239700298AC0 /* goliathUITests */ = {
+		F3BEB3872E54239700298AC0 /* goliath-to-goUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F3BEB3992E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliathUITests" */;
+			buildConfigurationList = F3BEB3992E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliath-to-goUITests" */;
 			buildPhases = (
 				F3BEB3842E54239700298AC0 /* Sources */,
 				F3BEB3852E54239700298AC0 /* Frameworks */,
@@ -169,11 +169,11 @@
 			fileSystemSynchronizedGroups = (
 				F3BEB38B2E54239700298AC0 /* goliathUITests */,
 			);
-			name = goliathUITests;
+			name = "goliath-to-goUITests";
 			packageProductDependencies = (
 			);
 			productName = goliathUITests;
-			productReference = F3BEB3882E54239700298AC0 /* goliathUITests.xctest */;
+			productReference = F3BEB3882E54239700298AC0 /* goliath-to-goUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -199,7 +199,7 @@
 					};
 				};
 			};
-			buildConfigurationList = F3BEB3682E54239600298AC0 /* Build configuration list for PBXProject "goliath" */;
+			buildConfigurationList = F3BEB3682E54239600298AC0 /* Build configuration list for PBXProject "goliath-to-go" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -213,9 +213,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F3BEB36C2E54239600298AC0 /* goliath */,
-				F3BEB37D2E54239700298AC0 /* goliathTests */,
-				F3BEB3872E54239700298AC0 /* goliathUITests */,
+				F3BEB36C2E54239600298AC0 /* goliath-to-go */,
+				F3BEB37D2E54239700298AC0 /* goliath-to-goTests */,
+				F3BEB3872E54239700298AC0 /* goliath-to-goUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -271,12 +271,12 @@
 /* Begin PBXTargetDependency section */
 		F3BEB3802E54239700298AC0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F3BEB36C2E54239600298AC0 /* goliath */;
+			target = F3BEB36C2E54239600298AC0 /* goliath-to-go */;
 			targetProxy = F3BEB37F2E54239700298AC0 /* PBXContainerItemProxy */;
 		};
 		F3BEB38A2E54239700298AC0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F3BEB36C2E54239600298AC0 /* goliath */;
+			target = F3BEB36C2E54239600298AC0 /* goliath-to-go */;
 			targetProxy = F3BEB3892E54239700298AC0 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -294,7 +294,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = goliath/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Goliath;
+				INFOPLIST_KEY_CFBundleDisplayName = "Goliath to Go";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -330,7 +330,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = goliath/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Goliath;
+				INFOPLIST_KEY_CFBundleDisplayName = "Goliath to Go";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -490,7 +490,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/goliath.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/goliath";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/goliath-to-go.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/goliath-to-go";
 			};
 			name = Debug;
 		};
@@ -509,7 +509,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/goliath.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/goliath";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/goliath-to-go.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/goliath-to-go";
 			};
 			name = Release;
 		};
@@ -550,7 +550,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		F3BEB3682E54239600298AC0 /* Build configuration list for PBXProject "goliath" */ = {
+		F3BEB3682E54239600298AC0 /* Build configuration list for PBXProject "goliath-to-go" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F3BEB3942E54239700298AC0 /* Debug */,
@@ -559,7 +559,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F3BEB3912E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliath" */ = {
+		F3BEB3912E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliath-to-go" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F3BEB3922E54239700298AC0 /* Debug */,
@@ -568,7 +568,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F3BEB3962E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliathTests" */ = {
+		F3BEB3962E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliath-to-goTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F3BEB3972E54239700298AC0 /* Debug */,
@@ -577,7 +577,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F3BEB3992E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliathUITests" */ = {
+		F3BEB3992E54239700298AC0 /* Build configuration list for PBXNativeTarget "goliath-to-goUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F3BEB39A2E54239700298AC0 /* Debug */,

@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F3BEB36C2E54239600298AC0"
-               BuildableName = "goliath.app"
-               BlueprintName = "goliath"
-               ReferencedContainer = "container:goliath.xcodeproj">
+               BuildableName = "goliath-to-go.app"
+               BlueprintName = "goliath-to-go"
+               ReferencedContainer = "container:goliath-to-go.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -36,9 +36,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F3BEB37D2E54239700298AC0"
-               BuildableName = "goliathTests.xctest"
-               BlueprintName = "goliathTests"
-               ReferencedContainer = "container:goliath.xcodeproj">
+               BuildableName = "goliath-to-goTests.xctest"
+               BlueprintName = "goliath-to-goTests"
+               ReferencedContainer = "container:goliath-to-go.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -47,9 +47,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F3BEB3872E54239700298AC0"
-               BuildableName = "goliathUITests.xctest"
-               BlueprintName = "goliathUITests"
-               ReferencedContainer = "container:goliath.xcodeproj">
+               BuildableName = "goliath-to-goUITests.xctest"
+               BlueprintName = "goliath-to-goUITests"
+               ReferencedContainer = "container:goliath-to-go.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -69,9 +69,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "F3BEB36C2E54239600298AC0"
-            BuildableName = "goliath.app"
-            BlueprintName = "goliath"
-            ReferencedContainer = "container:goliath.xcodeproj">
+            BuildableName = "goliath-to-go.app"
+            BlueprintName = "goliath-to-go"
+            ReferencedContainer = "container:goliath-to-go.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -92,9 +92,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "F3BEB36C2E54239600298AC0"
-            BuildableName = "goliath.app"
-            BlueprintName = "goliath"
-            ReferencedContainer = "container:goliath.xcodeproj">
+            BuildableName = "goliath-to-go.app"
+            BlueprintName = "goliath-to-go"
+            ReferencedContainer = "container:goliath-to-go.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
