@@ -103,18 +103,30 @@ struct ExerciseSelectionView: View {
 
     @State var workout: Workout
     @State private var searchPredicate: String = ""
-    @State private var available: [Exercise] = []
+    @State private var allExercises: [Exercise] = []
     @State private var navigateToExercise: WorkoutExercise?
 
-    private var filteredAvailable: [Exercise] {
+    private var filteredExercises: [Exercise] {
         let q = searchPredicate.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return available }
+        let base: [Exercise]
 
-        let needle = q.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-        return available.filter { ex in
-            let hay = ex.name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-            let words = hay.split(separator: " ")
-            return words.contains(where: { $0.hasPrefix(needle) }) || hay.contains(needle)
+        if q.isEmpty {
+            base = allExercises
+        } else {
+            let needle = q.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            base = allExercises.filter { ex in
+                let hay = ex.name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+                let words = hay.split(separator: " ")
+                return words.contains { $0.hasPrefix(needle) } || hay.contains(needle)
+            }
+        }
+
+        // Sort: preferred first, then localized case-insensitive by name
+        return base.sorted {
+            if $0.userPreferred != $1.userPreferred {
+                return $0.userPreferred && !$1.userPreferred
+            }
+            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
     }
 
@@ -138,21 +150,34 @@ struct ExerciseSelectionView: View {
 
             if let preset = workout.preset {
                 Section("Exercises for \(preset.name.capitalized)") {
-                    if available.isEmpty {
+                    if allExercises.isEmpty {
                         ContentUnavailableView(
                             "No exercises found",
                             systemImage: "exclamationmark.magnifyingglass",
                             description: Text("There are no exercises available for this preset.")
                         )
-                    } else if filteredAvailable.isEmpty {
+                    } else if filteredExercises.isEmpty {
                         ContentUnavailableView(
                             "No exercises found",
                             systemImage: "exclamationmark.magnifyingglass",
                             description: Text("Widen your search, look for something else, or report a missing exercise.")
                         )
                     } else {
-                        ForEach(filteredAvailable) { exercise in
-                            Button(exercise.name) { start(exercise: exercise) }
+                        ForEach(filteredExercises) { exercise in
+                            HStack {
+                                Text.highlightMatches(in: exercise.name, query: searchPredicate)
+                                Spacer()
+                                Button {
+                                    withAnimation {
+                                        exercise.userPreferred.toggle()
+                                        try? context.save()
+                                    }
+                                } label: {
+                                    Image(systemName: exercise.userPreferred ? "star.fill" : "star")
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                            .onTapGesture { start(exercise: exercise) }
                         }
                     }
                 }
@@ -197,18 +222,18 @@ struct ExerciseSelectionView: View {
 
     private func loadExercises() async {
         guard let preset = workout.preset else {
-            available = []
+            allExercises = []
             return
         }
         
         do {
             let targettedMuscleIds = Set(preset.targettedMuscles.map(\.id))
-            available = try context.fetch(FetchDescriptor<Exercise>(
+            allExercises = try context.fetch(FetchDescriptor<Exercise>(
                 predicate: #Predicate { ex in
                     ex.targettedMuscles.contains { mg in targettedMuscleIds.contains(mg.id) } },
-                sortBy: [SortDescriptor(\.name, order: .forward)]
+                sortBy: [SortDescriptor(\Exercise.name, order: .forward)]
             ))
-        } catch { available = [] }
+        } catch { allExercises = [] }
     }
 }
 

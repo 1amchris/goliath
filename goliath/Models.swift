@@ -1,5 +1,5 @@
 //
-//  Entities.swift
+//  Models.swift
 //  goliath
 //
 //  Created by Christophe Beaulieu on 2025-08-18.
@@ -67,6 +67,7 @@ class WorkoutExercise: Identifiable, Equatable {
 class Exercise: Identifiable, Equatable {
     @Attribute(.unique) var id: String
     var name: String
+    var userPreferred: Bool = false
 
     @Relationship(inverse: \MuscleGroup.exercises)
     var targettedMuscles: [MuscleGroup] = []
