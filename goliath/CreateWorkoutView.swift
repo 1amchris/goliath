@@ -102,8 +102,21 @@ struct ExerciseSelectionView: View {
     @EnvironmentObject private var nav: NavCoordinator
 
     @State var workout: Workout
+    @State private var searchPredicate: String = ""
     @State private var available: [Exercise] = []
     @State private var navigateToExercise: WorkoutExercise?
+
+    private var filteredAvailable: [Exercise] {
+        let q = searchPredicate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return available }
+
+        let needle = q.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        return available.filter { ex in
+            let hay = ex.name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            let words = hay.split(separator: " ")
+            return words.contains(where: { $0.hasPrefix(needle) }) || hay.contains(needle)
+        }
+    }
 
     var body: some View {
         List {
@@ -126,10 +139,19 @@ struct ExerciseSelectionView: View {
             if let preset = workout.preset {
                 Section("Exercises for \(preset.name.capitalized)") {
                     if available.isEmpty {
-                        Text("No exercises found for this preset.")
-                            .foregroundStyle(.secondary)
+                        ContentUnavailableView(
+                            "No exercises found",
+                            systemImage: "exclamationmark.magnifyingglass",
+                            description: Text("There are no exercises available for this preset.")
+                        )
+                    } else if filteredAvailable.isEmpty {
+                        ContentUnavailableView(
+                            "No exercises found",
+                            systemImage: "exclamationmark.magnifyingglass",
+                            description: Text("Widen your search, look for something else, or report a missing exercise.")
+                        )
                     } else {
-                        ForEach(available) { exercise in
+                        ForEach(filteredAvailable) { exercise in
                             Button(exercise.name) { start(exercise: exercise) }
                         }
                     }
@@ -160,6 +182,7 @@ struct ExerciseSelectionView: View {
             }
         }
         .task { await loadExercises() }
+        .searchable(text: $searchPredicate)
     }
 
     private func open(existing: WorkoutExercise) { navigateToExercise = existing }
