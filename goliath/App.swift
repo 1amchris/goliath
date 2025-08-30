@@ -10,34 +10,36 @@ import SwiftData
 
 @main
 struct GoliathApp: App {
-    let container: ModelContainer
+    let container: ModelContainer?
 
     init() {
-        let schema = Schema([Workout.self, WorkoutExercise.self, Exercise.self])
+        let schema = Schema([Workout.self, WorkoutExercise.self,
+            Exercise.self, WorkoutPreset.self, MuscleGroup.self])
         let config = ModelConfiguration()
 
-        var hasFailedBefore = false
-        while true {
-            do {
-                container = try ModelContainer(for: schema, configurations: config)
-                if hasFailedBefore { DataLoader.deleteAll(in: container.mainContext) }
-                DataLoader.seedMusclesIfNeeded(context: container.mainContext)
-                DataLoader.seedExercisesIfNeeded(context: container.mainContext)
-                DataLoader.seedWorkoutPresetsIfNeeded(context: container.mainContext)
-                break
-            } catch {
-                guard !hasFailedBefore
-                else { fatalError("Failed to set up SwiftData: \(error)") }
-
-                hasFailedBefore = true
-            }
+        if let modelContainer = try? ModelContainer(for: schema, configurations: config) {
+            //                DataLoader.deleteAll(in: container.mainContext)
+            DataLoader.seedMusclesIfNeeded(context: modelContainer.mainContext)
+            DataLoader.seedExercisesIfNeeded(context: modelContainer.mainContext)
+            DataLoader.seedWorkoutPresetsIfNeeded(context: modelContainer.mainContext)
+            container = modelContainer
+        } else {
+            print("Failed to set up SwiftData.")
+            container = nil
         }
     }
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            if let modelContainer = container {
+                HomeView().modelContainer(modelContainer)
+            } else {
+                ContentUnavailableView(
+                    "Failed to launch.",
+                    systemImage: "exclamationmark.triangle.fill",
+                    description: Text("Couldn't initialize the SwiftData model container. If you see this, please report this issue.")
+                )
+            }
         }
-        .modelContainer(container)
     }
 }
