@@ -177,7 +177,11 @@ private struct WorkoutsOnDayView: View {
                         systemImage: "figure.run",
                         description: Text("There are no registered workouts for this day. Remember to use the app when working out so they show up here :)")
                     )
+                } else if workouts.count == 1, let workout = workouts.first {
+                    // Automatically show the detail when only one workout
+                    ReviewWorkoutView(workout: workout)
                 } else {
+                    // Otherwise show the list
                     List(workouts) { w in
                         NavigationLink {
                             ReviewWorkoutView(workout: w)
