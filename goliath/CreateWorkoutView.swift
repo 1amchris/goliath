@@ -230,7 +230,7 @@ struct ExerciseSelectionView: View {
             let targettedMuscleIds = Set(preset.targettedMuscles.map(\.id))
             allExercises = try context.fetch(FetchDescriptor<Exercise>(
                 predicate: #Predicate { ex in
-                    ex.targettedMuscles.contains { mg in targettedMuscleIds.contains(mg.id) } },
+                    ex._targettedMuscles?.contains { mg in targettedMuscleIds.contains(mg.id) } ?? false },
                 sortBy: [SortDescriptor(\Exercise.name, order: .forward)]
             ))
         } catch { allExercises = [] }
@@ -319,14 +319,6 @@ struct DoExerciseView: View {
             }
         }
 
-        // Rest timer after logging a new set (not when editing)
-        .sheet(isPresented: $showingRestTimer) {
-            RestTimerSheet(
-                preferredDuration: $preferredRestSeconds,
-                onNextExercise: completeExercise
-            )
-        }
-
         // Add/Edit reps
         .sheet(isPresented: $showingRepsForm) {
             RepsEntrySheet(
@@ -353,6 +345,15 @@ struct DoExerciseView: View {
                 }
             )
         }
+        // Rest timer after logging a new set (not when editing)
+        .sheet(isPresented: $showingRestTimer) {
+            RestTimerSheet(
+                preferredDuration: $preferredRestSeconds,
+                onNextExercise: completeExercise
+            )
+            .interactiveDismissDisabled()
+        }
+
     }
 
     private func completeSet() {
@@ -387,11 +388,11 @@ struct RepsEntrySheet: View {
                     }
 
                     HStack {
-                        Button { value = max(0, value - 5) }    label: { Text("-5") }
+                        Button { value = max(0, value - 4) }    label: { Text("-4") }
                         Button { value = max(0, value - 1) }    label: { Text("-1") }
                         Spacer()
                         Button { value += 1 }                   label: { Text("+1") }
-                        Button { value += 5 }                   label: { Text("+5") }
+                        Button { value += 4 }                   label: { Text("+4") }
                     }
                     .buttonStyle(.bordered)
                 }
