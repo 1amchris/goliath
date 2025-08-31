@@ -10,18 +10,20 @@ import Foundation
 
 @Model
 class Workout: Identifiable, Equatable {
-    @Attribute(.unique) var id: UUID
-    var dateCompleted: Date
-    var dateModified: Date
-    var isDraft: Bool
+    /* @Attribute(.unique) */
+    var id: UUID = UUID()
+    
+    var dateCompleted: Date = Date.now
+    var dateModified: Date = Date.now
+    var isDraft: Bool = false
 
-    @Relationship(deleteRule: .nullify, inverse: \WorkoutPreset.workouts)
+    @Relationship(deleteRule: .nullify, inverse: \WorkoutPreset._workouts)
     var preset: WorkoutPreset? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.workout)
-    var _exercises: [WorkoutExercise] = []
+    var _exercises: [WorkoutExercise]? = []
     var exercises: [WorkoutExercise] {
-        get { _exercises.sorted { $0._order < $1._order } }
+        get { (_exercises ?? []).sorted { $0._order < $1._order } }
         set { _exercises = newValue }
     }
 
@@ -33,16 +35,20 @@ class Workout: Identifiable, Equatable {
     }
     
     static func == (lhs: Workout, rhs: Workout) -> Bool { lhs.id == rhs.id }
+    
+    static let EMPTY = Workout()
 }
 
 @Model
 class WorkoutExercise: Identifiable, Equatable {
-    @Attribute(.unique) var id: UUID
-    var exercise: Exercise
-    var name: String { exercise.name }
-    var targettedMuscles: [MuscleGroup] { exercise.targettedMuscles }
+    /* @Attribute(.unique) */
+    var id: UUID = UUID()
     
-    var _order: Int
+    var exercise: Exercise? = nil
+    var name: String { exercise?.name ?? Exercise.EMPTY.name }
+    var targettedMuscles: [MuscleGroup] { exercise?.targettedMuscles ?? Exercise.EMPTY.targettedMuscles }
+    
+    var _order: Int = Int.min
 
     var _repsJSON: String = "[]"
     var reps: [Int] {
@@ -51,7 +57,7 @@ class WorkoutExercise: Identifiable, Equatable {
     }
     var completedSets: Int { reps.count }
 
-    var workout: Workout
+    var workout: Workout? = nil
 
     init(exercise: Exercise, workout: Workout, order: Int) {
         self.id = UUID()
@@ -61,20 +67,32 @@ class WorkoutExercise: Identifiable, Equatable {
     }
     
     static func == (lhs: WorkoutExercise, rhs: WorkoutExercise) -> Bool { lhs.id == rhs.id }
+    
+    static let EMPTY = WorkoutExercise(exercise: Exercise.EMPTY, workout: Workout.EMPTY, order: Int.min)
 }
 
 @Model
 class Exercise: Identifiable, Equatable {
-    @Attribute(.unique) var id: String
-    var name: String
+    /* @Attribute(.unique) */
+    var id: String = UUID().uuidString
+    
+    var name: String = Exercise.EMPTY_NAME
     var userPreferred: Bool = false
-
-    @Relationship(inverse: \MuscleGroup.exercises)
-    var targettedMuscles: [MuscleGroup] = []
-
+    
+    @Relationship(inverse: \MuscleGroup._exercises)
+    var _targettedMuscles: [MuscleGroup]? = []
+    var targettedMuscles: [MuscleGroup] {
+        get { _targettedMuscles ?? [] }
+        set { _targettedMuscles = newValue }
+    }
+    
     @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.exercise)
-    var workoutExercises: [WorkoutExercise] = []
-
+    var _workoutExercises: [WorkoutExercise]? = []
+    var workoutExercises: [WorkoutExercise] {
+        get { _workoutExercises ?? [] }
+        set { _workoutExercises = newValue }
+    }
+    
     init(id: String, name: String, targettedMuscles: [MuscleGroup] = []) {
         self.id = id
         self.name = name
@@ -82,18 +100,32 @@ class Exercise: Identifiable, Equatable {
     }
     
     static func == (lhs: Exercise, rhs: Exercise) -> Bool { lhs.id == rhs.id }
+
+    static let EMPTY = Exercise(id: Exercise.EMPTY_ID, name: Exercise.EMPTY_NAME)
+    static private let EMPTY_ID = "NULL"
+    static private let EMPTY_NAME = "Undefined"
 }
 
 @Model
 class WorkoutPreset: Identifiable, Equatable {
-    @Attribute(.unique) var id: String
-    var name: String
-    var groupId: UUID
+    /* @Attribute(.unique) */
+    var id: String = UUID().uuidString
     
-    @Relationship(inverse: \MuscleGroup.presets)
-    var targettedMuscles: [MuscleGroup] = []
+    var name: String = WorkoutPreset.EMPTY_NAME
+    var groupId: UUID = UUID()
+    
+    @Relationship(inverse: \MuscleGroup._presets)
+    var _targettedMuscles: [MuscleGroup]? = []
+    var targettedMuscles: [MuscleGroup] {
+        get { _targettedMuscles ?? [] }
+        set { _targettedMuscles = newValue }
+    }
 
-    var workouts: [Workout] = []
+    var _workouts: [Workout]? = []
+    var workouts: [Workout] {
+        get { _workouts ?? [] }
+        set { _workouts = newValue }
+    }
     
     init(id: String, groupId: UUID, name: String, targeting muscleGroups: [MuscleGroup]) {
         self.id = id
@@ -103,6 +135,10 @@ class WorkoutPreset: Identifiable, Equatable {
     }
     
     static func == (lhs: WorkoutPreset, rhs: WorkoutPreset) -> Bool { lhs.id == rhs.id }
+    
+    static let EMPTY = WorkoutPreset(id: WorkoutPreset.EMPTY_ID, groupId: UUID(), name: WorkoutPreset.EMPTY_NAME, targeting: [])
+    static private let EMPTY_ID = "NULL"
+    static private let EMPTY_NAME = "Undefined"
 }
 
 @Model
@@ -129,13 +165,21 @@ class MuscleGroup: Identifiable, Equatable {
         case triceps
     }
 
-    @Attribute(.unique)
-    var id: String
+    /* @Attribute(.unique) */
+    var id: String = UUID().uuidString
     
-    var exercises: [Exercise] = []
-    
-    var presets: [WorkoutPreset] = []
-    
+    var _exercises: [Exercise]? = []
+    var exercises: [Exercise] {
+        get { _exercises ?? [] }
+        set { _exercises = newValue }
+    }
+
+    var _presets: [WorkoutPreset]? = []
+    var presets: [WorkoutPreset] {
+        get { _presets ?? [] }
+        set { _presets = newValue }
+    }
+
     init(_ id: Supported, exercises: [Exercise] = []) {
         self.id = id.rawValue
         self.exercises = exercises

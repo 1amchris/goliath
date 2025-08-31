@@ -335,7 +335,7 @@ struct WorkoutDetailView: View {
     var body: some View {
         List(workout.exercises) { wex in
             VStack(alignment: .leading) {
-                Text(wex.exercise.name)
+                Text(wex.exercise?.name ?? "Undefined")
                 Text("Sets: \(wex.completedSets)")
                     .font(.caption)
                     .foregroundStyle(.secondary)

@@ -138,7 +138,7 @@ struct ExerciseSelectionView: View {
                         HStack {
                             Image(systemName: "arrow.uturn.right")
                             VStack(alignment: .leading) {
-                                Text(last.exercise.name)
+                                Text(last.exercise?.name ?? "Undefined")
                                 Text("Sets so far: \(last.completedSets)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -261,7 +261,7 @@ struct DoExerciseView: View {
                 if let preset = workout.preset {
                     HStack {
                         Text("Exercise"); Spacer()
-                        Text(workoutExercise.exercise.name)
+                        Text(workoutExercise.exercise?.name ?? "Undefined")
                             .foregroundStyle(.secondary)
                     }
                     HStack {
@@ -330,7 +330,7 @@ struct DoExerciseView: View {
         // Add/Edit reps
         .sheet(isPresented: $showingRepsForm) {
             RepsEntrySheet(
-                exerciseName: workoutExercise.exercise.name,
+                exerciseName: workoutExercise.exercise?.name ?? "Undefined",
                 value: $tempReps,
                 onSave: { reps in
                     withAnimation {
