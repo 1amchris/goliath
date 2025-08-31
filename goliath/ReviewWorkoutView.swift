@@ -28,7 +28,7 @@ struct ReviewWorkoutView: View {
                 HStack {
                     Text("Preset")
                     Spacer()
-                    Text(workout.preset?.name ?? "Undefined")
+                    Text(workout.preset?.name ?? WorkoutPreset.EMPTY.name)
                         .foregroundStyle(.secondary)
                 }
                 
@@ -75,7 +75,7 @@ struct ReviewWorkoutView: View {
                 ForEach(workout.exercises) { wex in
                     Section {
                         HStack {
-                            Text(wex.exercise?.name ?? "Undefined").font(.headline)
+                            Text(wex.exercise?.name ?? Exercise.EMPTY.name).font(.headline)
                             Spacer()
                             Text("\(wex.completedSets) sets")
                                 .foregroundStyle(.secondary)
@@ -145,7 +145,7 @@ struct ReviewWorkoutView: View {
         // Reps editing sheet (reuse your existing sheet)
         .sheet(isPresented: $showingRepsForm) {
             RepsEntrySheet(
-                exerciseName: editingWex?.exercise?.name ?? "Undefined",
+                exerciseName: editingWex?.exercise?.name ?? Exercise.EMPTY.name,
                 value: $tempReps,
                 onSave: { newReps in
                     guard let wex = editingWex, let idx = editingIndex, idx < wex.reps.count else {

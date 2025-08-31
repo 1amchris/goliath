@@ -129,7 +129,7 @@ struct HomeView: View {
                             }
 
                             HStack {
-                                Text(draft.preset?.name.capitalized ?? "Undefined")
+                                Text(draft.preset?.name.capitalized ?? WorkoutPreset.EMPTY.name)
                                     .font(.subheadline)
                                 if let modified = Calendar.current.date(bySettingHour: 0, minute: 0, second: 0, of: draft.dateModified) {
                                     Text("· \(draft.dateModified.formatted(.relative(presentation: .named)))")
@@ -174,7 +174,7 @@ struct HomeView: View {
                             nav.path.append(.workoutDetail(workout.id))
                         } label: {
                             VStack(alignment: .leading) {
-                                Text(workout.preset?.name.capitalized ?? "Undefined")
+                                Text(workout.preset?.name.capitalized ?? WorkoutPreset.EMPTY.name)
                                     .font(.headline)
                                 Text(workout.dateCompleted.formatted(date: .abbreviated, time: .omitted))
                                     .font(.caption)
@@ -335,7 +335,7 @@ struct WorkoutDetailView: View {
     var body: some View {
         List(workout.exercises) { wex in
             VStack(alignment: .leading) {
-                Text(wex.exercise?.name ?? "Undefined")
+                Text(wex.exercise?.name ?? Exercise.EMPTY.name)
                 Text("Sets: \(wex.completedSets)")
                     .font(.caption)
                     .foregroundStyle(.secondary)

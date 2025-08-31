@@ -106,6 +106,7 @@ struct ExerciseSelectionView: View {
     @State private var allExercises: [Exercise] = []
     @State private var navigateToExercise: WorkoutExercise?
 
+    // Base filtering + sorting (preferred first, then A→Z)
     private var filteredExercises: [Exercise] {
         let q = searchPredicate.trimmingCharacters(in: .whitespacesAndNewlines)
         let base: [Exercise]
@@ -121,13 +122,26 @@ struct ExerciseSelectionView: View {
             }
         }
 
-        // Sort: preferred first, then localized case-insensitive by name
         return base.sorted {
             if $0.userPreferred != $1.userPreferred {
                 return $0.userPreferred && !$1.userPreferred
             }
             return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
+    }
+
+    // Split into matching vs others for the current preset
+    private var splitByPreset: (matching: [Exercise], others: [Exercise]) {
+        let targetIds = Set(workout.preset?.targettedMuscles.map(\.id) ?? [])
+        guard !targetIds.isEmpty else { return (filteredExercises, []) }
+
+        let matching = filteredExercises.filter { ex in
+            ex.targettedMuscles.contains { targetIds.contains($0.id) }
+        }
+        let others = filteredExercises.filter { ex in
+            !ex.targettedMuscles.contains { targetIds.contains($0.id) }
+        }
+        return (matching, others)
     }
 
     var body: some View {
@@ -138,7 +152,7 @@ struct ExerciseSelectionView: View {
                         HStack {
                             Image(systemName: "arrow.uturn.right")
                             VStack(alignment: .leading) {
-                                Text(last.exercise?.name ?? "Undefined")
+                                Text(last.exercise?.name ?? Exercise.EMPTY.name)
                                 Text("Sets so far: \(last.completedSets)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -149,35 +163,34 @@ struct ExerciseSelectionView: View {
             }
 
             if let preset = workout.preset {
+                let sections = splitByPreset
+
+                // Section 1 — exercises that match the preset’s muscles
                 Section("Exercises for \(preset.name.capitalized)") {
                     if allExercises.isEmpty {
                         ContentUnavailableView(
                             "No exercises found",
                             systemImage: "exclamationmark.magnifyingglass",
-                            description: Text("There are no exercises available for this preset.")
+                            description: Text("There are no exercises available.")
                         )
-                    } else if filteredExercises.isEmpty {
+                    } else if sections.matching.isEmpty {
                         ContentUnavailableView(
-                            "No exercises found",
+                            "No matching exercises",
                             systemImage: "exclamationmark.magnifyingglass",
-                            description: Text("Widen your search, look for something else, or report a missing exercise.")
+                            description: Text("Try a different search or pick from Other exercises below.")
                         )
                     } else {
-                        ForEach(filteredExercises) { exercise in
-                            HStack {
-                                Text.highlightMatches(in: exercise.name, query: searchPredicate)
-                                Spacer()
-                                Button {
-                                    withAnimation {
-                                        exercise.userPreferred.toggle()
-                                        try? context.save()
-                                    }
-                                } label: {
-                                    Image(systemName: exercise.userPreferred ? "star.fill" : "star")
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                            .onTapGesture { start(exercise: exercise) }
+                        ForEach(sections.matching) { exercise in
+                            exerciseRow(exercise)
+                        }
+                    }
+                }
+
+                // Section 2 — other exercises (not matching preset muscles)
+                if !sections.others.isEmpty {
+                    Section("Other exercises") {
+                        ForEach(sections.others) { exercise in
+                            exerciseRow(exercise)
                         }
                     }
                 }
@@ -186,7 +199,8 @@ struct ExerciseSelectionView: View {
                     ContentUnavailableView(
                         "No preset selected",
                         systemImage: "questionmark.app.dashed",
-                        description: Text("Somehow, no preset has been selected for this workout. Please report this issue."))
+                        description: Text("Somehow, no preset has been selected for this workout. Please report this issue.")
+                    )
                 }
             }
         }
@@ -210,6 +224,29 @@ struct ExerciseSelectionView: View {
         .searchable(text: $searchPredicate)
     }
 
+    // MARK: - Row
+
+    @ViewBuilder
+    private func exerciseRow(_ exercise: Exercise) -> some View {
+        HStack {
+            Text.highlightMatches(in: exercise.name, query: searchPredicate)
+            Spacer()
+            Button {
+                withAnimation {
+                    exercise.userPreferred.toggle()
+                    try? context.save()
+                }
+            } label: {
+                Image(systemName: exercise.userPreferred ? "star.fill" : "star")
+            }
+            .buttonStyle(.borderless)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { start(exercise: exercise) }
+    }
+
+    // MARK: - Actions / Data
+
     private func open(existing: WorkoutExercise) { navigateToExercise = existing }
 
     private func start(exercise: Exercise) {
@@ -221,19 +258,14 @@ struct ExerciseSelectionView: View {
     }
 
     private func loadExercises() async {
-        guard let preset = workout.preset else {
-            allExercises = []
-            return
-        }
-        
         do {
-            let targettedMuscleIds = Set(preset.targettedMuscles.map(\.id))
+            // Fetch ALL exercises; we split into sections in-memory
             allExercises = try context.fetch(FetchDescriptor<Exercise>(
-                predicate: #Predicate { ex in
-                    ex._targettedMuscles?.contains { mg in targettedMuscleIds.contains(mg.id) } ?? false },
                 sortBy: [SortDescriptor(\Exercise.name, order: .forward)]
             ))
-        } catch { allExercises = [] }
+        } catch {
+            allExercises = []
+        }
     }
 }
 
@@ -261,7 +293,7 @@ struct DoExerciseView: View {
                 if let preset = workout.preset {
                     HStack {
                         Text("Exercise"); Spacer()
-                        Text(workoutExercise.exercise?.name ?? "Undefined")
+                        Text(workoutExercise.exercise?.name ?? Exercise.EMPTY.name)
                             .foregroundStyle(.secondary)
                     }
                     HStack {
@@ -322,7 +354,7 @@ struct DoExerciseView: View {
         // Add/Edit reps
         .sheet(isPresented: $showingRepsForm) {
             RepsEntrySheet(
-                exerciseName: workoutExercise.exercise?.name ?? "Undefined",
+                exerciseName: workoutExercise.exercise?.name ?? Exercise.EMPTY.name,
                 value: $tempReps,
                 onSave: { reps in
                     withAnimation {
