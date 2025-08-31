@@ -9,37 +9,39 @@ import SwiftUI
 import SwiftData
 
 struct MonthlyStreakCalendarView: View {
-    @State var monthAnchor: Date = .now
-    @State var selectedDate: Date? = nil
+    // Drives which month is shown
+    @State private var monthAnchor: Date = .now
+    @State private var selectedDate: Date? = nil
+
+    // For detecting day rollovers
+    @State private var now: Date = .now
+    private let minuteTicker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     private let calendar = Calendar.current
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
-    
-    @Query private var workouts: [Workout]
 
-    init() {
-        let comps = calendar.dateComponents([.year, .month], from: monthAnchor)
-        let startOfMonth = calendar.date(from: comps)!
-        let startOfNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)!
-        
-        _workouts = Query(
-            filter: #Predicate<Workout> { w in
-                w.dateCompleted >= startOfMonth && w.dateCompleted < startOfNextMonth
-            },
-            sort: [SortDescriptor(\.dateCompleted, order: .forward)]
-        )
+    // Fetch broadly; filter by month in-memory
+    @Query(sort: [SortDescriptor(\Workout.dateCompleted, order: .forward)])
+    private var allWorkouts: [Workout]
+
+    // Workouts within the currently displayed month
+    private var workoutsThisMonth: [Workout] {
+        let start = startOfMonth(monthAnchor)
+        let next  = calendar.date(byAdding: .month, value: 1, to: start)!
+        return allWorkouts.filter { $0.dateCompleted >= start && $0.dateCompleted < next }
     }
 
     var body: some View {
         VStack(spacing: 8) {
-//            header
             weekdayHeader
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(daysForMonth(), id: \.self) { day in
-                    DayCell(day: day,
-                            isToday: isToday(day),
-                            inCurrentMonth: isInCurrentMonth(day),
-                            hasWorkouts: isInWorkoutDays(day))
+                    DayCell(
+                        day: day,
+                        isToday: isToday(day),
+                        inCurrentMonth: isInCurrentMonth(day),
+                        hasWorkouts: hasWorkouts(on: day)
+                    )
                     .contentShape(Rectangle())
                     .onTapGesture {
                         guard isInCurrentMonth(day) else { return }
@@ -51,24 +53,32 @@ struct MonthlyStreakCalendarView: View {
         }
         .padding(.vertical, 8)
         .sheet(item: $selectedDate) { date in
-            WorkoutsOnDayView(day: date, workouts: findWorkouts(for: date))
+            WorkoutsOnDayView(
+                day: date,
+                workouts: workoutsOn(date)
+            )
+        }
+        // Keep initial anchor in sync with "now"
+        .onAppear { monthAnchor = .now }
+        // 🔔 Recompute at minute granularity; detect day change
+        .onReceive(minuteTicker) { tick in
+            // only act when the day actually changes (avoids extra re-renders)
+            if !calendar.isDate(now, inSameDayAs: tick) {
+                now = tick
+                // If we’re showing “current month”, ensure anchor follows into the new month
+                // (e.g., at midnight on Mar 1st while viewing Feb, leave anchor alone)
+                if calendar.isDate(monthAnchor, inSameMonthAs: .now) {
+                    monthAnchor = .now
+                }
+            }
         }
     }
 
     // MARK: - Header
-    private var header: some View {
-        Text(monthTitle(monthAnchor))
-            .font(.headline)
-            .monospacedDigit()
-    }
-
     private var weekdayHeader: some View {
         let symbols = calendar.veryShortWeekdaySymbols
         let firstWeekdayIndex = calendar.firstWeekday - 1
-
-        // rotate to respect firstWeekday
-        let ordered = Array(symbols[firstWeekdayIndex...])
-                    + Array(symbols[..<firstWeekdayIndex])
+        let ordered = Array(symbols[firstWeekdayIndex...]) + Array(symbols[..<firstWeekdayIndex])
 
         return HStack {
             ForEach(ordered, id: \.self) { s in
@@ -83,15 +93,6 @@ struct MonthlyStreakCalendarView: View {
 
     // MARK: - Date helpers
 
-    private func monthTitle(_ date: Date) -> AttributedString {
-        let comps = calendar.dateComponents([.year, .month], from: date)
-        let monthDate = calendar.date(from: comps) ?? date
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.setLocalizedDateFormatFromTemplate("yMMMM") // e.g., September 2025
-        return AttributedString(formatter.string(from: monthDate))
-    }
-
     private func startOfMonth(_ date: Date) -> Date {
         let comps = calendar.dateComponents([.year, .month], from: date)
         return calendar.date(from: comps)!
@@ -105,14 +106,12 @@ struct MonthlyStreakCalendarView: View {
             let weekdayOfFirst = calendar.dateComponents([.weekday], from: start).weekday
         else { return [] }
 
-        // Locale-aware leading blanks
-        let firstWeekdayIndex = calendar.firstWeekday - 1   // 0-based (e.g. Sunday=0)
+        let firstWeekdayIndex = calendar.firstWeekday - 1   // 0-based
         let weekdayIndex = weekdayOfFirst - 1               // 0-based
         let leading = (weekdayIndex - firstWeekdayIndex + 7) % 7
 
         var days: [Date] = []
 
-        // Leading padding: days before the 1st, counting back from start
         if leading > 0 {
             for i in stride(from: leading, to: 0, by: -1) {
                 let d = calendar.date(byAdding: .day, value: -i, to: start)!
@@ -120,13 +119,11 @@ struct MonthlyStreakCalendarView: View {
             }
         }
 
-        // Current month days
-        for offset in 0..<(monthRange.count) {
+        for offset in 0..<monthRange.count {
             let d = calendar.date(byAdding: .day, value: offset, to: start)!
             days.append(calendar.startOfDay(for: d))
         }
 
-        // Trailing padding to fill the last week
         let remainder = days.count % 7
         if remainder != 0 {
             let need = 7 - remainder
@@ -143,23 +140,29 @@ struct MonthlyStreakCalendarView: View {
     private func isInCurrentMonth(_ date: Date) -> Bool {
         calendar.isDate(date, equalTo: monthAnchor, toGranularity: .month)
     }
-    
-    private func isInWorkoutDays(_ date: Date) -> Bool {
-        workouts.contains { workout in
-            calendar.isDate(date, inSameDayAs: workout.dateCompleted)
-        }
-    }
-    
-    private func findWorkouts(for date: Date) -> [Workout] {
-        workouts
-            .filter { workout in calendar.isDate(date, inSameDayAs: workout.dateCompleted) }
-            .sorted { $0.dateCompleted < $1.dateCompleted }
-    }
 
     private func isToday(_ date: Date) -> Bool {
         calendar.isDateInToday(date)
     }
+
+    private func hasWorkouts(on date: Date) -> Bool {
+        workoutsThisMonth.contains { calendar.isDate($0.dateCompleted, inSameDayAs: date) }
+    }
+
+    private func workoutsOn(_ date: Date) -> [Workout] {
+        workoutsThisMonth
+            .filter { calendar.isDate($0.dateCompleted, inSameDayAs: date) }
+            .sorted { $0.dateCompleted < $1.dateCompleted }
+    }
 }
+
+// MARK: - Tiny helper for month compare
+private extension Calendar {
+    func isDate(_ d1: Date, inSameMonthAs d2: Date) -> Bool {
+        isDate(d1, equalTo: d2, toGranularity: .month)
+    }
+}
+
 
 private struct WorkoutsOnDayView: View {
     let day: Date
