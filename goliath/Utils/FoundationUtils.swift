@@ -39,3 +39,11 @@ extension Date: @retroactive Identifiable {
     public var id: Date { self }
 }
 
+extension Sequence where Element: Hashable {
+    /// Returns an array containing only the unique elements,
+    /// preserving their original order of appearance.
+    func unique() -> [Element] {
+        var seen: Set<Element> = []
+        return self.filter { seen.insert($0).inserted }
+    }
+}

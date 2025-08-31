@@ -21,7 +21,6 @@ struct ReviewWorkoutView: View {
     @State private var showingRepsForm = false
     @State private var editingWex: WorkoutExercise?
     @State private var editingIndex: Int?
-    
     var body: some View {
         List {
             // MARK: Details
@@ -55,6 +54,14 @@ struct ReviewWorkoutView: View {
                 }
             }
             
+            Section("Muscles worked out") {
+                MusculoDiagramsView.AllCoronals(
+                    presenting: workout.exercises.flatMap {
+                            $0.targettedMuscles.compactMap {
+                                try? MusculoDiagramsView.MuscleGroup(fromMuscleWith: $0.id) { }
+                            }}.unique())
+            }
+                        
             // MARK: Exercises + reps
             if workout.exercises.isEmpty {
                 Section {
