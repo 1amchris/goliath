@@ -8,6 +8,9 @@
 import SwiftUI
 import Combine
 import UserNotifications
+import UIKit
+
+private let feedback = UINotificationFeedbackGenerator()
 
 struct RestTimerSheet: View {
     @Binding var preferredDuration: TimeInterval
@@ -17,12 +20,19 @@ struct RestTimerSheet: View {
     var onNextExercise: () -> Void = { }
 
     @State private var remaining: TimeInterval = 0
+    { didSet { if oldValue != remaining && remaining == 0 {
+        feedback.notificationOccurred(.success)
+    }}}
     @State private var total: TimeInterval = 0
     @State private var endDate: Date? = nil
 
     @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+
+    // Notification IDs
+    private let restNotificationId = "rest-finished"
+    private let restFollowUpId = "rest-finished.followup"
 
     var body: some View {
         VStack(spacing: 16) {
@@ -58,7 +68,7 @@ struct RestTimerSheet: View {
                 HStack {
                     Button(role: .cancel) {
                         stopTicker()
-                        cancelCompletionNotification()
+                        cancelCompletionNotifications()
                         onSkip()
                         dismiss()
                     } label: {
@@ -70,7 +80,7 @@ struct RestTimerSheet: View {
 
                     Button {
                         stopTicker()
-                        cancelCompletionNotification()
+                        cancelCompletionNotifications()
                         onNextExercise()
                         dismiss()
                     } label: {
@@ -80,7 +90,7 @@ struct RestTimerSheet: View {
                 }
             } else {
                 Button {
-                    cancelCompletionNotification()
+                    cancelCompletionNotifications()
                     onFinish()
                     dismiss()
                 } label: {
@@ -93,18 +103,15 @@ struct RestTimerSheet: View {
         .padding(.top, 12)
         .onAppear {
             resetToPreferred()
-            requestNotificationAuthorizationIfNeeded()
-            scheduleCompletionNotificationIfNeeded()
+            scheduleCompletionNotificationsIfNeeded()
+            feedback.prepare()
         }
         .onReceive(ticker) { _ in recomputeRemaining() }
-        .onChange(of: scenePhase) { _, _ in
-            // Recompute when going background/foreground so countdown reflects real time passed
-            recomputeRemaining()
-        }
+        .onChange(of: scenePhase) { _, _ in recomputeRemaining() } // stay accurate across bg/fg
         .onDisappear {
             stopTicker()
-            // keep/cancel notifications based on your preference; we cancel here to be safe
-            // cancelCompletionNotification()
+            // if you prefer to keep pending notifications when dismissing, comment this out:
+            // cancelCompletionNotifications()
         }
         .presentationDetents([.fraction(0.5)])
         .presentationDragIndicator(.visible)
@@ -126,37 +133,26 @@ struct RestTimerSheet: View {
         }
     }
 
-    private func tick() {
-        // Not used directly anymore; we derive from endDate for resilience.
-        recomputeRemaining()
-    }
-
-    /// Adjust both the *current* countdown and the *preferred* default by shifting the endDate.
+    /// Adjusts current countdown and preferred default by shifting the endDate.
     private func adjust(by seconds: TimeInterval) {
-        // Update saved preference
         preferredDuration = max(0, preferredDuration + seconds)
 
-        // Shift endDate accordingly (create one if absent)
         let now = Date()
         if endDate == nil { endDate = now.addingTimeInterval(max(0, preferredDuration)) }
         endDate = (endDate ?? now).addingTimeInterval(seconds)
 
-        // Clamp: endDate shouldn't be in the past
         if let ed = endDate, ed < now { endDate = now }
 
-        // Update totals/remaining
-        total = max(total + seconds, 0)
+        total = max(0, total + seconds)
         recomputeRemaining()
-
-        // Refresh completion notification
-        scheduleCompletionNotificationIfNeeded()
+        scheduleCompletionNotificationsIfNeeded()
     }
 
     private func resetToPreferred() {
         total = max(1, preferredDuration.rounded())
         endDate = Date().addingTimeInterval(total)
         recomputeRemaining()
-        scheduleCompletionNotificationIfNeeded()
+        scheduleCompletionNotificationsIfNeeded()
     }
 
     private func stopTicker() {
@@ -168,32 +164,34 @@ struct RestTimerSheet: View {
         return String(format: "%02d:%02d", s / 60, s % 60)
     }
 
-    // MARK: - Local notification (optional but recommended)
+    // MARK: - Local notifications (prominent)
 
-    private let restNotificationId = "rest-finished-notification"
-
-    private func requestNotificationAuthorizationIfNeeded() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            guard settings.authorizationStatus == .notDetermined else { return }
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
-        }
-    }
-
-    private func scheduleCompletionNotificationIfNeeded() {
+    private func scheduleCompletionNotificationsIfNeeded() {
         guard let endDate, remaining > 0 else { return }
-        cancelCompletionNotification()
+        cancelCompletionNotifications()
 
         let content = UNMutableNotificationContent()
-        content.title = "Rest complete"
-        content.body = "Time to start your next set."
-        content.sound = .default
+        content.title = "⏱️ Rest Done"
+        content.body = "Let’s start your next set."
+        content.threadIdentifier = "rest-session"
+        content.badge = 1
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, endDate.timeIntervalSinceNow), repeats: false)
-        let req = UNNotificationRequest(identifier: restNotificationId, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+        if #available(iOS 15.0, *) {
+            content.interruptionLevel = .timeSensitive
+            content.relevanceScore = 0.9
+        }
+
+        let notification = UNNotificationRequest(
+            identifier: restNotificationId,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: max(1, endDate.timeIntervalSinceNow), repeats: false)
+        )
+        UNUserNotificationCenter.current().add(notification, withCompletionHandler: nil)
     }
 
-    private func cancelCompletionNotification() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [restNotificationId])
+    private func cancelCompletionNotifications() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [restNotificationId, restFollowUpId])
     }
 }
+

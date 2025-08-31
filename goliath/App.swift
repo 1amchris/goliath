@@ -61,6 +61,13 @@ struct GoliathApp: App {
                     HomeView()
                         .id(app.restartToken)
                         .modelContainer(modelContainer)
+                        .onAppear {
+                            // Ask to send notifications
+                            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                                guard settings.authorizationStatus == .notDetermined else { return }
+                                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+                            }
+                        }
                 } else {
                     VStack {
                         ContentUnavailableView(
