@@ -250,11 +250,20 @@ struct ExerciseSelectionView: View {
     private func open(existing: WorkoutExercise) { navigateToExercise = existing }
 
     private func start(exercise: Exercise) {
-        let wex = WorkoutExercise(exercise: exercise, workout: workout, order: workout.exercises.count)
-        workout.dateModified = Date()
-        context.insert(wex)
-        try? context.save()
-        navigateToExercise = wex
+        if let last = workout.exercises.last, last.reps.isEmpty {
+            // Replace the not-yet-started exercise in-place
+            last.exercise = exercise
+            workout.dateModified = Date()
+            try? context.save()
+            navigateToExercise = last
+        } else {
+            // Append a new workout exercise
+            let wex = WorkoutExercise(exercise: exercise, workout: workout, order: workout.exercises.count)
+            workout.dateModified = Date()
+            context.insert(wex)
+            try? context.save()
+            navigateToExercise = wex
+        }
     }
 
     private func loadExercises() async {
