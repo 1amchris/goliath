@@ -13,6 +13,7 @@ class Workout: Identifiable, Equatable {
     /* @Attribute(.unique) */
     var id: UUID = UUID()
     
+    var title: String = Workout.EMPTY_TITLE
     var dateCompleted: Date = Date.now
     var dateModified: Date = Date.now
     var isDraft: Bool = false
@@ -27,8 +28,9 @@ class Workout: Identifiable, Equatable {
         set { _exercises = newValue }
     }
 
-    init(isDraft: Bool = true) {
+    init(title: String = "", isDraft: Bool = true) {
         self.id = UUID()
+        self.title = !title.isEmpty ? title : Workout.EMPTY_TITLE
         self.dateCompleted = Date()
         self.dateModified = Date()
         self.isDraft = isDraft
@@ -37,6 +39,12 @@ class Workout: Identifiable, Equatable {
     static func == (lhs: Workout, rhs: Workout) -> Bool { lhs.id == rhs.id }
     
     static let EMPTY = Workout()
+    static private let EMPTY_TITLE = "Untitled"
+    
+    func reevaluateTitleIfNeeded() {
+        guard let p = preset, title == Workout.EMPTY_TITLE else { return }
+        title = "\(p.name) Workout"
+    }
 }
 
 @Model

@@ -31,7 +31,9 @@ struct CreateWorkoutView: View {
                 ForEach(presets.group(by: \.groupId).items, id: \.key) { presetGroup in
                     Section {
                         ForEach(presetGroup.value.sorted { $0.id < $1.id }) { preset in
-                            Button(action: { handlePresetSelection(preset) }) {
+                            Button {
+                                withAnimation { handlePresetSelection(preset) }
+                            } label: {
                                 Text(preset.name.capitalized)
                             }
                         }
@@ -42,15 +44,21 @@ struct CreateWorkoutView: View {
         .navigationTitle("Create a Workout")
         .alert("A draft workout already exists", isPresented: $showDraftAlert) {
             Button("Continue") {
-                if let draft = drafts.first { nav.path.append(.draft(draft.id)) }
+                withAnimation {
+                    if let draft = drafts.first {
+                        nav.path.append(.draft(draft.id))
+                    }
+                }
             }
             Button("Discard", role: .destructive) {
-                if let draft = drafts.first {
-                    context.delete(draft)
-                    try? context.save()
-                }
-                if let preset = selectedPreset {
-                    createWorkout(preset: preset)
+                withAnimation {
+                    if let draft = drafts.first {
+                        context.delete(draft)
+                        try? context.save()
+                    }
+                    if let preset = selectedPreset {
+                        createWorkout(preset: preset)
+                    }
                 }
             }
             Button("Cancel", role: .cancel) {}
@@ -76,6 +84,7 @@ struct CreateWorkoutView: View {
     private func createWorkout(preset: WorkoutPreset) {
         let workout = Workout(isDraft: true)
         workout.preset = preset
+        workout.reevaluateTitleIfNeeded()
         context.insert(workout)
         try? context.save()
         nav.path.append(.draft(workout.id))

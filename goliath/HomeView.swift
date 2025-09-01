@@ -168,13 +168,13 @@ struct HomeView: View {
                     MonthlyStreakCalendarView()
                 }
                 
-                Section {
+                Section("Previous workouts") {
                     ForEach(workouts) { workout in
                         Button {
                             nav.path.append(.workoutDetail(workout.id))
                         } label: {
                             VStack(alignment: .leading) {
-                                Text(workout.preset?.name.capitalized ?? WorkoutPreset.EMPTY.name)
+                                Text(workout.title.capitalized)
                                     .font(.headline)
                                 Text(workout.dateCompleted.formatted(date: .abbreviated, time: .omitted))
                                     .font(.caption)
@@ -285,11 +285,7 @@ struct HomeView: View {
         .environmentObject(nav)
         .alert("Discard draft workout?", isPresented: $showDiscardAlert, presenting: selectedDraft) { draft in
             Button("Discard", role: .destructive) {
-                for wex in draft.exercises {
-                    context.delete(wex)
-                }
-                context.delete(draft)
-                try? context.save()
+                withAnimation { discardDraft(draft) }
             }
             Button("Cancel", role: .cancel) {}
         }
@@ -297,6 +293,14 @@ struct HomeView: View {
 
     private var activeDraft: Workout? { draftWorkouts.first }
 
+    private func discardDraft(_ draft: Workout) {
+        for wex in draft.exercises {
+            context.delete(wex)
+        }
+        context.delete(draft)
+        try? context.save()
+    }
+    
     private func isExpired(_ workout: Workout) -> Bool {
         guard let hours = Calendar.current.dateComponents([.hour], from: workout.dateModified, to: Date()).hour else {
             return false
