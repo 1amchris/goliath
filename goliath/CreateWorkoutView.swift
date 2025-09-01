@@ -31,9 +31,7 @@ struct CreateWorkoutView: View {
                 ForEach(presets.group(by: \.groupId).items, id: \.key) { presetGroup in
                     Section {
                         ForEach(presetGroup.value.sorted { $0.id < $1.id }) { preset in
-                            Button {
-                                withAnimation { handlePresetSelection(preset) }
-                            } label: {
+                            Button { handlePresetSelection(preset) } label: {
                                 Text(preset.name.capitalized)
                             }
                         }
@@ -67,27 +65,31 @@ struct CreateWorkoutView: View {
     }
 
     private func handlePresetSelection(_ preset: WorkoutPreset) {
-        if let draft = drafts.first {
-            if isExpired(draft) {
-                context.delete(draft)
-                try? context.save()
-                createWorkout(preset: preset)
+        withAnimation {
+            if let draft = drafts.first {
+                if isExpired(draft) {
+                    context.delete(draft)
+                    try? context.save()
+                    createWorkout(preset: preset)
+                } else {
+                    selectedPreset = preset
+                    showDraftAlert = true
+                }
             } else {
-                selectedPreset = preset
-                showDraftAlert = true
+                createWorkout(preset: preset)
             }
-        } else {
-            createWorkout(preset: preset)
         }
     }
 
     private func createWorkout(preset: WorkoutPreset) {
-        let workout = Workout(isDraft: true)
-        workout.preset = preset
-        workout.reevaluateTitleIfNeeded()
-        context.insert(workout)
-        try? context.save()
-        nav.path.append(.draft(workout.id))
+        withAnimation {
+            let workout = Workout(isDraft: true)
+            workout.preset = preset
+            workout.reevaluateTitleIfNeeded()
+            context.insert(workout)
+            try? context.save()
+            nav.path.append(.draft(workout.id))
+        }
     }
 
     private func isExpired(_ workout: Workout) -> Bool {
@@ -99,8 +101,10 @@ struct CreateWorkoutView: View {
 
     private func autoDeleteExpiredDraftIfNeeded() {
         if let draft = drafts.first, isExpired(draft) {
-            context.delete(draft)
-            try? context.save()
+            withAnimation {
+                context.delete(draft)
+                try? context.save()
+            }
         }
     }
 }
@@ -112,6 +116,9 @@ struct ExerciseSelectionView: View {
 
     @State var workout: Workout
     @State private var searchPredicate: String = ""
+
+    @State private var isLoading = true
+    @State private var showLoadingIndicator = false
     @State private var allExercises: [Exercise] = []
     @State private var navigateToExercise: WorkoutExercise?
 
@@ -174,9 +181,16 @@ struct ExerciseSelectionView: View {
             if let preset = workout.preset {
                 let sections = splitByPreset
 
-                // Section 1 — exercises that match the preset’s muscles
                 Section("Exercises for \(preset.name.capitalized)") {
-                    if allExercises.isEmpty {
+                    if isLoading {
+                        if showLoadingIndicator {   // ← only after 3s
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                        }
+                    } else if allExercises.isEmpty {
                         ContentUnavailableView(
                             "No exercises found",
                             systemImage: "exclamationmark.magnifyingglass",
@@ -195,8 +209,7 @@ struct ExerciseSelectionView: View {
                     }
                 }
 
-                // Section 2 — other exercises (not matching preset muscles)
-                if !sections.others.isEmpty {
+                if !isLoading && !sections.others.isEmpty {
                     Section("Other exercises") {
                         ForEach(sections.others) { exercise in
                             exerciseRow(exercise)
@@ -240,12 +253,7 @@ struct ExerciseSelectionView: View {
         HStack {
             Text.highlightMatches(in: exercise.name, query: searchPredicate)
             Spacer()
-            Button {
-                withAnimation {
-                    exercise.userPreferred.toggle()
-                    try? context.save()
-                }
-            } label: {
+            Button { toggleExercisePreference(exercise) } label: {
                 Image(systemName: exercise.userPreferred ? "star.fill" : "star")
             }
             .buttonStyle(.borderless)
@@ -260,13 +268,11 @@ struct ExerciseSelectionView: View {
 
     private func start(exercise: Exercise) {
         if let last = workout.exercises.last, last.reps.isEmpty {
-            // Replace the not-yet-started exercise in-place
             last.exercise = exercise
             workout.dateModified = Date()
             try? context.save()
             navigateToExercise = last
         } else {
-            // Append a new workout exercise
             let wex = WorkoutExercise(exercise: exercise, workout: workout, order: workout.exercises.count)
             workout.dateModified = Date()
             context.insert(wex)
@@ -276,13 +282,34 @@ struct ExerciseSelectionView: View {
     }
 
     private func loadExercises() async {
+        isLoading = true
+        showLoadingIndicator = false
+        
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if isLoading { withAnimation { showLoadingIndicator = true } }
+        }
+
+        defer {
+            withAnimation {
+                isLoading = false
+                showLoadingIndicator = false
+            }
+        }
+
         do {
-            // Fetch ALL exercises; we split into sections in-memory
-            allExercises = try context.fetch(FetchDescriptor<Exercise>(
-                sortBy: [SortDescriptor(\Exercise.name, order: .forward)]
-            ))
+            allExercises = try context.fetch(
+                FetchDescriptor<Exercise>(sortBy: [SortDescriptor(\Exercise.name, order: .forward)])
+            )
         } catch {
             allExercises = []
+        }
+    }
+
+    private func toggleExercisePreference(_ exercise: Exercise) {
+        withAnimation {
+            exercise.userPreferred.toggle()
+            try? context.save()
         }
     }
 }
