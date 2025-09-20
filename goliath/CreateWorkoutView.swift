@@ -329,7 +329,6 @@ struct DoExerciseView: View {
     @State var workoutExercise: WorkoutExercise
     var onUpdated: (WorkoutExercise) -> Void
 
-    // Track which set is being edited (nil = adding a new set)
     @State private var editingIndex: Int? = nil
 
     var body: some View {
@@ -387,6 +386,20 @@ struct DoExerciseView: View {
         }
         .navigationTitle("Do Exercise")
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    togglePreferred()
+                } label: {
+                    if (workoutExercise.exercise?.userPreferred ?? false) {
+                        Label("Unstar exercise", systemImage: "star.fill")
+                    } else {
+                        Label("Star exercise", systemImage: "star")
+                    }
+                }
+                .labelStyle(.iconOnly)
+                .disabled(workoutExercise.exercise == nil)
+            }
+
             ToolbarItem(placement: .primaryAction) {
                 Button(action: completeExercise) {
                     Label("Next exercise", systemImage: "forward.end.alt.fill")
@@ -422,7 +435,6 @@ struct DoExerciseView: View {
                 }
             )
         }
-        // Rest timer after logging a new set (not when editing)
         .sheet(isPresented: $showingRestTimer) {
             RestTimerSheet(
                 preferredDuration: $preferredRestSeconds,
@@ -430,7 +442,14 @@ struct DoExerciseView: View {
             )
             .interactiveDismissDisabled()
         }
+    }
 
+    private func togglePreferred() {
+        guard let ex = workoutExercise.exercise else { return }
+        withAnimation {
+            ex.userPreferred.toggle()
+            try? context.save()
+        }
     }
 
     private func completeSet() {
