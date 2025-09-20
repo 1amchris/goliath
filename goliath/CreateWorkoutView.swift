@@ -115,6 +115,7 @@ struct ExerciseSelectionView: View {
     @EnvironmentObject private var nav: NavCoordinator
 
     @State var workout: Workout
+    @State private var previewExercise: Exercise?
     @State private var searchPredicate: String = ""
 
     @State private var isLoading = true
@@ -244,22 +245,45 @@ struct ExerciseSelectionView: View {
         }
         .task { await loadExercises() }
         .searchable(text: $searchPredicate)
+        .sheet(item: $previewExercise) { ex in
+            NavigationStack {
+                ExercisePreview(exercise: ex)
+                    .navigationTitle(ex.name)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Start") {
+                                start(exercise: ex)
+                                previewExercise = nil
+                            }
+                        }
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                toggleExercisePreference(ex)
+                            } label: {
+                                Image(systemName: ex.userPreferred ? "star.fill" : "star")
+                            }
+                        }
+                    }
+            }
+        }
     }
 
     // MARK: - Row
-
     @ViewBuilder
     private func exerciseRow(_ exercise: Exercise) -> some View {
         HStack {
             Text.highlightMatches(in: exercise.name, query: searchPredicate)
             Spacer()
-            Button { toggleExercisePreference(exercise) } label: {
+            Button {
+                toggleExercisePreference(exercise)
+            } label: {
                 Image(systemName: exercise.userPreferred ? "star.fill" : "star")
             }
             .buttonStyle(.borderless)
         }
-        .contentShape(Rectangle())
         .onTapGesture { start(exercise: exercise) }
+        .onLongPressGesture { previewExercise = exercise }
     }
 
     // MARK: - Actions / Data
@@ -310,6 +334,36 @@ struct ExerciseSelectionView: View {
         withAnimation {
             exercise.userPreferred.toggle()
             try? context.save()
+        }
+    }
+}
+
+private struct ExercisePreview: View {
+    let exercise: Exercise
+
+    var body: some View {
+        List {
+            if !exercise.targettedMuscles.isEmpty {
+                Section {
+                    MusculoDiagramsView.AllCoronals(
+                        presenting: exercise.targettedMuscles.compactMap {
+                            try? MusculoDiagramsView.MuscleGroup(fromMuscleWith: $0.id) { }
+                        }.unique()
+                    )
+                }
+
+                Section("Muscles worked") {
+                    ForEach(exercise.targettedMuscles) { muscle in
+                        Text(muscle.id.capitalized)
+                    }
+                }
+            } else {
+                ContentUnavailableView(
+                    "Something went wrong.",
+                    image: "exclamationmark.triangle",
+                    description: Text("Exercise doesn't work any muscles out."))
+                .symbolRenderingMode(.hierarchical)
+            }
         }
     }
 }

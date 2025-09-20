@@ -106,6 +106,7 @@ struct GoliathApp: App {
             } message: {
                 Text("Deleting everything is irreversible. This will delete this app's data across all iCloud devices. Please use this action as a last resort only.")
             }
+            .symbolRenderingMode(.hierarchical)
         }
     }
 }
