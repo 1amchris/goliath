@@ -60,7 +60,7 @@ struct MonthlyStreakCalendarView: View {
         }
         // Keep initial anchor in sync with "now"
         .onAppear { monthAnchor = .now }
-        // 🔔 Recompute at minute granularity; detect day change
+        // Recompute at minute granularity; detect day change
         .onReceive(minuteTicker) { tick in
             // only act when the day actually changes (avoids extra re-renders)
             if !calendar.isDate(now, inSameDayAs: tick) {
@@ -81,7 +81,7 @@ struct MonthlyStreakCalendarView: View {
         let ordered = Array(symbols[firstWeekdayIndex...]) + Array(symbols[..<firstWeekdayIndex])
 
         return HStack {
-            ForEach(ordered, id: \.self) { s in
+            ForEach(Array(ordered.enumerated()), id: \.offset) { _, s in
                 Text(s.uppercased())
                     .font(.caption2)
                     .foregroundStyle(.secondary)
