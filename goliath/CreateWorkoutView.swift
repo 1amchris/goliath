@@ -12,12 +12,25 @@ import SwiftData
 struct CreateWorkoutView: View {
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var nav: NavCoordinator
-    @Query(filter: #Predicate<Workout> { $0.isDraft }) var drafts: [Workout]
 
+    @Query(filter: #Predicate<Workout> { $0.isDraft }) var drafts: [Workout]
     @Query var presets: [WorkoutPreset]
 
     @State private var showDraftAlert = false
     @State private var selectedPreset: WorkoutPreset?
+
+    @State private var previewIndex: Int? = nil
+
+    private var groupedPresets: [(key: UUID, value: [WorkoutPreset])] {
+        presets.group(by: \.groupId).items
+            .sorted { $0.key < $1.key }
+            .map {(key: $0.key,
+                   value: $0.value.sorted { $0.id < $1.id })}
+    }
+    
+    private var flatPresets: [WorkoutPreset] {
+        groupedPresets.flatMap(\.value)
+    }
 
     var body: some View {
         List {
@@ -28,12 +41,16 @@ struct CreateWorkoutView: View {
                     description: Text("We couldn't retrieve any presets.")
                 )
             } else {
-                ForEach(presets.group(by: \.groupId).items, id: \.key) { presetGroup in
+                ForEach(groupedPresets, id: \.key) { presetGroup in
                     Section {
-                        ForEach(presetGroup.value.sorted { $0.id < $1.id }) { preset in
-                            Button { handlePresetSelection(preset) } label: {
-                                Text(preset.name.capitalized)
-                            }
+                        ForEach(presetGroup.value) { preset in
+                            Text(preset.name.capitalized)
+                                .onTapGesture { handlePresetSelection(preset) }
+                                .onLongPressGesture {
+                                    if let idx = flatPresets.firstIndex(where: { $0.id == preset.id }) {
+                                        previewIndex = idx
+                                    }
+                                }
                         }
                     }
                 }
@@ -42,11 +59,7 @@ struct CreateWorkoutView: View {
         .navigationTitle("Create a Workout")
         .alert("A draft workout already exists", isPresented: $showDraftAlert) {
             Button("Continue") {
-                withAnimation {
-                    if let draft = drafts.first {
-                        nav.path.append(.draft(draft.id))
-                    }
-                }
+                withAnimation { if let draft = drafts.first { nav.path.append(.draft(draft.id)) } }
             }
             Button("Discard", role: .destructive) {
                 withAnimation {
@@ -54,16 +67,98 @@ struct CreateWorkoutView: View {
                         context.delete(draft)
                         try? context.save()
                     }
-                    if let preset = selectedPreset {
-                        createWorkout(preset: preset)
-                    }
+                    if let preset = selectedPreset { createWorkout(preset: preset) }
                 }
             }
             Button("Cancel", role: .cancel) {}
         }
+        .sheet(
+            isPresented: Binding(
+                get: { previewIndex != nil },
+                set: { if !$0 { previewIndex = nil } }
+            )
+        ) {
+            if let idx = previewIndex {
+                NavigationStack {
+                    PresetPreviewView(preset: flatPresets[idx])
+                        .navigationBarTitleDisplayMode(.inline)
+                        .navigationTitle(flatPresets[idx].name.capitalized)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button {
+                                    previewIndex = nil
+                                } label: {
+                                    Label("Close", systemImage: "xmark")
+                                }
+                            }
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Select") {
+                                    handlePresetSelection(flatPresets[idx])
+                                    previewIndex = nil
+                                }
+                            }
+                            ToolbarItem(placement: .bottomBar) {
+                                HStack {
+                                    Button {
+                                        previewPreviousPreset()
+                                    } label: {
+                                        Label("Previous", systemImage: "chevron.left")
+                                    }
+                                    .disabled(idx == 0)
+                                    
+                                    Spacer(minLength: 0)
+                                    
+                                    Button {
+                                        previewNextPreset()
+                                    } label: {
+                                        Label("Next", systemImage: "chevron.right")
+                                    }
+                                    .disabled(idx >= flatPresets.count - 1)
+                                }
+                                .gesture(
+                                    DragGesture(minimumDistance: 20, coordinateSpace: .local)
+                                        .onEnded { value in
+                                            // horizontal-only gesture with a bit of threshold
+                                            let dx = value.translation.width
+                                            let dy = value.translation.height
+                                            guard abs(dx) > abs(dy), abs(dx) > 30 else { return }
+
+                                            if dx < 0 {
+                                                previewNextPreset()
+                                            } else {
+                                                previewPreviousPreset()
+                                            }
+                                        }
+                                )
+
+                            }
+                        }
+                }
+            } else {
+                ContentUnavailableView(
+                    "Preview unavailable",
+                    systemImage: "questionmark.app.dashed",
+                    description: Text("The preset you are looking for couldn't be identified.")
+                )
+            }
+        }
         .task { autoDeleteExpiredDraftIfNeeded() }
     }
 
+    // MARK: - Actions
+
+    private func previewNextPreset() {
+        if let i = previewIndex, i < flatPresets.count - 1 {
+            withAnimation { previewIndex = i + 1 }
+        }
+    }
+    
+    private func previewPreviousPreset() {
+        if let i = previewIndex, i > 0 {
+            withAnimation { previewIndex = i - 1 }
+        }
+    }
+    
     private func handlePresetSelection(_ preset: WorkoutPreset) {
         withAnimation {
             if let draft = drafts.first {
@@ -104,6 +199,36 @@ struct CreateWorkoutView: View {
             withAnimation {
                 context.delete(draft)
                 try? context.save()
+            }
+        }
+    }
+}
+
+// MARK: - Preset preview (unchanged)
+private struct PresetPreviewView: View {
+    let preset: WorkoutPreset
+
+    var body: some View {
+        List {
+            if preset.targettedMuscles.isEmpty {
+                Section("Muscles") {
+                    Text("No muscles recorded.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Section {
+                    MusculoDiagramsView.AllCoronals(
+                        presenting: preset.targettedMuscles.compactMap {
+                            try? MusculoDiagramsView.MuscleGroup(fromMuscleWith: $0.id) { }
+                        }.unique()
+                    )
+                }
+                Section("Muscles") {
+                    ForEach(preset.targettedMuscles) { muscle in
+                        Text(muscle.id.capitalized)
+                    }
+                }
             }
         }
     }
@@ -248,7 +373,6 @@ struct ExerciseSelectionView: View {
         .sheet(item: $previewExercise) { ex in
             NavigationStack {
                 ExercisePreview(exercise: ex)
-                    .navigationTitle(ex.name)
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
@@ -365,6 +489,7 @@ private struct ExercisePreview: View {
                 .symbolRenderingMode(.hierarchical)
             }
         }
+        .navigationTitle(exercise.name.capitalized)
     }
 }
 
