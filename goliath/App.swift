@@ -7,32 +7,66 @@
 
 import SwiftUI
 import SwiftData
+import CloudKit
+import UserNotifications
 
 // MARK: - AppController (owns container + restart token)
+
 @MainActor
 final class AppController: ObservableObject {
+ 
+    enum StoreMode {
+        case auto
+        case localOnly
+    }
+
     @Published var container: ModelContainer?
     @Published var restartToken = UUID()
 
     init() {
-        container = Self.makeContainerAndSeed()
+        Task {
+            #if DEBUG
+            self.container = await Self.makeContainerAndSeed(mode: .localOnly)
+            #else
+            self.container = await Self.makeContainerAndSeed(mode: .auto)
+            #endif
+            self.restartToken = UUID()
+        }
     }
 
     /// Rebuilds the model container and refreshes the SwiftUI tree.
     /// If `wipe` is true, it deletes all data first (best-effort).
-    func rebuildContainer(wipe: Bool = false) {
+    func rebuildContainer(wipe: Bool = false) async {
         if wipe, let ctx = container?.mainContext {
             DataLoader.deleteAll(in: ctx)
         }
-        container = Self.makeContainerAndSeed()
-        restartToken = UUID()
+
+        #if DEBUG
+        self.container = await Self.makeContainerAndSeed(mode: .localOnly)
+        #else
+        self.container = await Self.makeContainerAndSeed(mode: .auto)
+        #endif
+
+        self.restartToken = UUID()
     }
 
     // MARK: factory
-    private static func makeContainerAndSeed() -> ModelContainer? {
-        let schema = Schema([ Workout.self, WorkoutExercise.self,
-            Exercise.self, WorkoutPreset.self, MuscleGroup.self ])
-        let config = ModelConfiguration()
+    static func makeContainerAndSeed(mode: StoreMode = .auto) async -> ModelContainer? {
+        let schema = Schema([Workout.self, WorkoutExercise.self, Exercise.self, WorkoutPreset.self, MuscleGroup.self])
+        let containerID = "iCloud.com.1amchris.goliath"
+
+        let config: ModelConfiguration
+        switch mode {
+        case .localOnly:
+            config = ModelConfiguration()
+        case .auto:
+            let status = try? await CKContainer(identifier: containerID).accountStatus()
+            config = (status == .available)
+                ? ModelConfiguration(containerID)
+                : ModelConfiguration()
+        }
+        
+        print("ModelConfig couldKitContainerIdentifier: \(config.cloudKitContainerIdentifier ?? "undefined")")
 
         do {
             let mc = try ModelContainer(for: schema, configurations: config)
@@ -41,8 +75,17 @@ final class AppController: ObservableObject {
             DataLoader.seedWorkoutPresetsIfNeeded(context: mc.mainContext)
             return mc
         } catch {
-            print("Caught an error while initializing SwiftData: \(error)")
-            return nil
+            // Fallback to local if CloudKit config failed
+            do {
+                let local = try ModelContainer(for: schema, configurations: ModelConfiguration())
+                DataLoader.seedMusclesIfNeeded(context: local.mainContext)
+                DataLoader.seedExercisesIfNeeded(context: local.mainContext)
+                DataLoader.seedWorkoutPresetsIfNeeded(context: local.mainContext)
+                return local
+            } catch {
+                print("Caught an error while initializing SwiftData: \(error)")
+                return nil
+            }
         }
     }
 }
@@ -62,7 +105,6 @@ struct GoliathApp: App {
                         .id(app.restartToken)
                         .modelContainer(modelContainer)
                         .onAppear {
-                            // Ask to send notifications
                             UNUserNotificationCenter.current().getNotificationSettings { settings in
                                 guard settings.authorizationStatus == .notDetermined else { return }
                                 UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
@@ -75,36 +117,27 @@ struct GoliathApp: App {
                             systemImage: "exclamationmark.triangle.fill",
                             description: Text("Couldn't initialize the SwiftData model container.")
                         )
-                        Button("Reload the app") {
-                            showWarning = true
-                        }
+                        Button("Reload the app") { showWarning = true }
                     }
                     .padding()
                 }
             }
             .confirmationDialog("Please confirm", isPresented: $showWarning) {
-                Button("Wipe everything, then reload", role: .destructive) {
-                    showDeleteConfirmation = true
-                }
-
+                Button("Wipe everything, then reload", role: .destructive) { showDeleteConfirmation = true }
                 Button("Only reload") {
-                    app.rebuildContainer(wipe: false)
+                    Task { await app.rebuildContainer(wipe: false) }
                 }
-
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("Would you like to reload the app, or delete everything, and start fresh (Factory reset-style).")
+                Text("Would you like to reload the app, or delete everything and start fresh?")
             }
-            
             .confirmationDialog("Please confirm", isPresented: $showDeleteConfirmation) {
                 Button("Delete everything", role: .destructive) {
-                    // Soft reset: wipe + rebuild container + rebuild UI
-                    app.rebuildContainer(wipe: true)
+                    Task { await app.rebuildContainer(wipe: true) }
                 }
-
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("Deleting everything is irreversible. This will delete this app's data across all iCloud devices. Please use this action as a last resort only.")
+                Text("Deleting everything is irreversible and will affect iCloud if enabled.")
             }
             .symbolRenderingMode(.hierarchical)
         }
