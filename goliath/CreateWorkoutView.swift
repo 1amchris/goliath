@@ -44,13 +44,17 @@ struct CreateWorkoutView: View {
                 ForEach(groupedPresets, id: \.key) { presetGroup in
                     Section {
                         ForEach(presetGroup.value) { preset in
-                            Text(preset.name.capitalized)
-                                .onTapGesture { handlePresetSelection(preset) }
-                                .onLongPressGesture {
-                                    if let idx = flatPresets.firstIndex(where: { $0.id == preset.id }) {
-                                        previewIndex = idx
-                                    }
+                            HStack {
+                                Text(preset.name.capitalized)
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture { handlePresetSelection(preset) }
+                            .onLongPressGesture {
+                                if let idx = flatPresets.firstIndex(where: { $0.id == preset.id }) {
+                                    previewIndex = idx
                                 }
+                            }
                         }
                     }
                 }
