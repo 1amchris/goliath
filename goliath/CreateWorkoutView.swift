@@ -21,7 +21,7 @@ struct CreateWorkoutView: View {
 
     @State private var previewIndex: Int? = nil
 
-    private var groupedPresets: [(key: UUID, value: [WorkoutPreset])] {
+    private var groupedPresets: [(key: WorkoutPreset.GroupID, value: [WorkoutPreset])] {
         presets.group(by: \.groupId).items
             .sorted { $0.key < $1.key }
             .map {(key: $0.key,

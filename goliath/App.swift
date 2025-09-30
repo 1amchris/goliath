@@ -70,17 +70,13 @@ final class AppController: ObservableObject {
 
         do {
             let mc = try ModelContainer(for: schema, configurations: config)
-            DataLoader.seedMusclesIfNeeded(context: mc.mainContext)
-            DataLoader.seedExercisesIfNeeded(context: mc.mainContext)
-            DataLoader.seedWorkoutPresetsIfNeeded(context: mc.mainContext)
+            DataLoader.consolidateAndSeedModels(in: mc.mainContext)
             return mc
         } catch {
             // Fallback to local if CloudKit config failed
             do {
                 let local = try ModelContainer(for: schema, configurations: ModelConfiguration())
-                DataLoader.seedMusclesIfNeeded(context: local.mainContext)
-                DataLoader.seedExercisesIfNeeded(context: local.mainContext)
-                DataLoader.seedWorkoutPresetsIfNeeded(context: local.mainContext)
+                DataLoader.consolidateAndSeedModels(in: local.mainContext)
                 return local
             } catch {
                 print("Caught an error while initializing SwiftData: \(error)")

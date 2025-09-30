@@ -120,7 +120,8 @@ class WorkoutPreset: Identifiable, Equatable {
     var id: String = UUID().uuidString
     
     var name: String = WorkoutPreset.EMPTY_NAME
-    var groupId: UUID = UUID()
+    
+    var groupId: GroupID = UUID()
     
     @Relationship(inverse: \MuscleGroup._presets)
     var _targettedMuscles: [MuscleGroup]? = []
@@ -135,7 +136,7 @@ class WorkoutPreset: Identifiable, Equatable {
         set { _workouts = newValue }
     }
     
-    init(id: String, groupId: UUID, name: String, targeting muscleGroups: [MuscleGroup]) {
+    init(id: String, groupId: GroupID, name: String, targeting muscleGroups: [MuscleGroup]) {
         self.id = id
         self.groupId = groupId
         self.name = name
@@ -147,6 +148,9 @@ class WorkoutPreset: Identifiable, Equatable {
     static let EMPTY = WorkoutPreset(id: WorkoutPreset.EMPTY_ID, groupId: UUID(), name: WorkoutPreset.EMPTY_NAME, targeting: [])
     static private let EMPTY_ID = "NULL"
     static private let EMPTY_NAME = "Undefined"
+    
+    typealias ID = String
+    typealias GroupID = UUID
 }
 
 @Model
