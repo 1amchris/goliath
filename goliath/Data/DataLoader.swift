@@ -131,9 +131,10 @@ enum DataLoader {
 
     static func seedWorkoutPresetsIfNeeded(in context: ModelContext) {
         do {
-            let catalog: Dictionary<String, [WorkoutPresetDTO]> = try loadDTOCatalog(forResource: "workout-presets")
+            let catalog: [[WorkoutPresetDTO]] = try loadDTOCatalog(forResource: "workout-presets")
 
-            for (groupId, grouping) in catalog.items {
+            for grouping in catalog {
+                let groupId = UUID()
                 for dto in grouping {
                     try? upsertPreset(from: dto, groupId: groupId, in: context)
                 }
@@ -252,7 +253,7 @@ enum DataLoader {
         return orderedUnique.compactMap { byId[$0] }
     }
     
-    fileprivate static func upsertPreset(from dto: WorkoutPresetDTO, groupId: String? = nil, in context: ModelContext) throws {
+    fileprivate static func upsertPreset(from dto: WorkoutPresetDTO, groupId: WorkoutPreset.GroupID? = nil, in context: ModelContext) throws {
         // 1) find by logical id (dataset id)
         let existing = try context.fetch(
             FetchDescriptor<WorkoutPreset>(
@@ -264,12 +265,13 @@ enum DataLoader {
         if let ex = existing {
             // 2) update
             ex.name = dto.name
+            ex.groupId = groupId ?? ex.groupId
             ex.targettedMuscles = try resolveMuscles(dto.muscles, in: context)
         } else {
             // 3) insert
             let ex = WorkoutPreset(
                 id: dto.datasetId,
-                groupId: UUID(), // TODO: Migrate to GroupID = String, and use groupId instead
+                groupId: groupId ?? UUID(),
                 name: dto.name,
                 targeting: try resolveMuscles(dto.muscles, in: context)
             )

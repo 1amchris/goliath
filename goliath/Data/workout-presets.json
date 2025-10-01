@@ -1,5 +1,5 @@
-{
-    "full-top-lower": [
+[
+    [
         {
             "datasetId": "full-body",
             "name": "Full Body",
@@ -51,7 +51,7 @@
             ]
         }
     ],
-    "pull-push-lower": [
+    [
         {
             "datasetId": "pull",
             "name": "Pull",
@@ -73,7 +73,7 @@
             ]
         }
     ],
-    "body-part-group": [
+    [
         {
             "datasetId": "arms",
             "name": "Arms",
@@ -127,4 +127,4 @@
             ]
         }
     ]
-}
+]
